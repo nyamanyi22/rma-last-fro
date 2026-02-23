@@ -17,6 +17,7 @@ import AdminDashboard from './pages/admin/AdminHome';
 import NewRMA from './pages/client/NewRMA';
 import ProductManagement from './pages/admin/ProductManagement';
 import CustomerManagement from './pages/admin/CustomerManagement';
+import SalesManagement from './pages/admin/SalesManagement';
 import AdminLayout from './layouts/AdminLayout';
 
 
@@ -118,6 +119,7 @@ function App() {
               <Route path="rma" element={<RMAManagement />} />
               <Route path="products" element={<ProductManagement />} />
               <Route path="customers" element={<CustomerManagement />} />
+              <Route path="sales" element={<SalesManagement />} />
 
               {/* Placeholders for now */}
               <Route path="reports" element={<div style={{ padding: 20 }}>Reports Module Coming Soon</div>} />
@@ -137,6 +139,7 @@ function App() {
               <Route path="rma" element={<RMAManagement />} />
               <Route path="products" element={<ProductManagement />} />
               <Route path="customers" element={<CustomerManagement />} />
+              <Route path="sales" element={<SalesManagement />} />
               <Route path="settings" element={<SuperAdminSettings />} />
               <Route path="security" element={<SuperAdminSecurity />} />
               <Route path="reports" element={<SuperAdminReports />} />

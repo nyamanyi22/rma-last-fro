@@ -59,5 +59,37 @@ export const productApi = {
     getCategories: () => api.get('/admin/products/categories'),
     getBrands: () => api.get('/admin/products/brands'),
 };
-
+//sales api
+export const saleApi = {
+    getSales: (params) => api.get('/admin/sales', { params }),
+    getSale: (id) => api.get(`/admin/sales/${id}`),
+    createSale: (data) => api.post('/admin/sales', data),
+    updateSale: (id, data) => api.put(`/admin/sales/${id}`, data),
+    deleteSale: (id) => api.delete(`/admin/sales/${id}`),
+    bulkDeleteSales: (ids) => api.post('/admin/sales/bulk-delete', { ids }),
+    importSales: (file, onUploadProgress) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/admin/sales/import', formData, { onUploadProgress });
+    },
+    exportSales: () => api.get('/admin/sales/export', { responseType: 'blob' }),
+    linkToUser: (data) => api.post('/admin/sales/link-to-user', data),
+    getMySales: (params) => api.get('/sales/my', { params }),
+};
+//customers api
+export const customerApi = {
+    getCustomers: (params) => api.get('/admin/customers', { params }),
+    getCustomer: (id) => api.get(`/admin/customers/${id}`),
+    createCustomer: (data) => api.post('/admin/customers', data),
+    updateCustomer: (id, data) => api.put(`/admin/customers/${id}`, data),
+    deleteCustomer: (id) => api.delete(`/admin/customers/${id}`),
+    bulkDeleteCustomers: (ids) => api.post('/admin/customers/bulk-delete', { ids }),
+    bulkUpdateStatus: (ids, isActive) => api.post('/admin/customers/bulk-status', { ids, is_active: isActive }),
+    importCustomers: (file, onUploadProgress) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/admin/customers/import', formData, { onUploadProgress });
+    },
+    exportCustomers: () => api.get('/admin/customers/export', { responseType: 'blob' }),
+};
 export default api;

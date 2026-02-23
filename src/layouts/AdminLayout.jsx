@@ -26,7 +26,8 @@ import {
     BarChart,
     ExitToApp,
     Assignment,
-    Inventory
+    Inventory,
+    Receipt
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 
@@ -63,6 +64,7 @@ const AdminLayout = () => {
         { text: 'RMA Management', icon: <Assignment />, path: '/admin/rma' },
         { text: 'Products', icon: <Inventory />, path: '/admin/products' },
         { text: 'Customers', icon: <People />, path: '/admin/customers' },
+        { text: 'Sales', icon: <Receipt />, path: '/admin/sales' },
         { text: 'Reports', icon: <BarChart />, path: '/admin/reports' },
         { text: 'Settings', icon: <Settings />, path: '/admin/settings' },
     ];

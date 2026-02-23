@@ -29,7 +29,8 @@ import {
     Inventory,
     Group,
     ExitToApp,
-    ChevronLeft
+    ChevronLeft,
+    Receipt
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 
@@ -67,6 +68,7 @@ const SuperAdminLayout = () => {
         { text: 'RMA Management', icon: <Assignment />, path: '/super-admin/rma' },
         { text: 'Product Management', icon: <Inventory />, path: '/super-admin/products' },
         { text: 'Customer Management', icon: <Group />, path: '/super-admin/customers' },
+        { text: 'Sales Management', icon: <Receipt />, path: '/super-admin/sales' },
         { text: 'Security', icon: <Security />, path: '/super-admin/security' },
         { text: 'Settings', icon: <Settings />, path: '/super-admin/settings' },
         { text: 'Reports', icon: <BarChart />, path: '/super-admin/reports' },
