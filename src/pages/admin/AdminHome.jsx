@@ -1,5 +1,5 @@
-﻿import React from "react";
-import { Container, Typography, Paper, Box, Button, Grid } from "@mui/material";
+﻿import React, { useState, useEffect } from "react";
+import { Container, Typography, Paper, Box, Button, Grid, CircularProgress, Alert } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Assignment,
@@ -9,17 +9,56 @@ import {
   Notifications,
   Settings
 } from "@mui/icons-material";
+import rmaService from "../../services/api/rmaService";
+import customerService from "../../services/api/customerService";
+import productService from "../../services/api/productService";
 
 const AdminHome = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    pendingRMAs: 0,
+    underReviewRMAs: 0,
+    totalCustomers: 0,
+    totalProducts: 0,
+    activeNotifications: 0,
+    totalSales: 0
+  });
 
-  // Mock stats - in real app, fetch from API
-  const stats = {
-    pendingRMAs: 12,
-    totalCustomers: 45,
-    totalProducts: 120,
-    activeNotifications: 3,
-  };
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch RMA stats
+        const rmaStatsRes = await rmaService.getDashboardStats();
+
+        // Fetch customers for total count
+        const customersRes = await customerService.getCustomers({ limit: 1 });
+
+        // Fetch products for total count
+        const productsRes = await productService.getProducts({ limit: 1 });
+
+        // Update stats
+        setStats({
+          pendingRMAs: rmaStatsRes.data?.pending_count || 0,
+          underReviewRMAs: rmaStatsRes.data?.under_review_count || 0,
+          totalCustomers: customersRes.data?.total || 0,
+          totalProducts: productsRes.data?.total || 0,
+          activeNotifications: 0, // Placeholder as no notification service yet
+          totalSales: rmaStatsRes.data?.total_count || 0
+        });
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+        setError("Failed to load dashboard statistics. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   const quickActions = [
     {
@@ -71,6 +110,14 @@ const AdminHome = () => {
     window.location.href = "/login";
   };
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
@@ -90,10 +137,16 @@ const AdminHome = () => {
         </Box>
       </Paper>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 4 }}>
+          {error}
+        </Alert>
+      )}
+
       {/* Quick Actions Grid */}
       <Grid container spacing={3}>
         {quickActions.map((action, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
             <Paper
               sx={{
                 p: 3,
@@ -133,22 +186,22 @@ const AdminHome = () => {
 
       {/* Recent Activity & Stats */}
       <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Recent RMA Activity
             </Typography>
             <Box sx={{ mt: 2 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Paper sx={{ p: 2, bgcolor: 'warning.light', color: 'warning.contrastText' }}>
                     <Typography variant="h5" align="center">{stats.pendingRMAs}</Typography>
                     <Typography variant="body2" align="center">Pending RMAs</Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Paper sx={{ p: 2, bgcolor: 'info.light', color: 'info.contrastText' }}>
-                    <Typography variant="h5" align="center">8</Typography>
+                    <Typography variant="h5" align="center">{stats.underReviewRMAs}</Typography>
                     <Typography variant="body2" align="center">Under Review</Typography>
                   </Paper>
                 </Grid>
@@ -156,26 +209,26 @@ const AdminHome = () => {
 
               <Box sx={{ mt: 3 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Recent activities will be displayed here. Click "RMA Management" to view and process all RMAs.
+                  Recent activities and statistics are synchronized with the backend. Click "RMA Management" to view and process all RMAs.
                 </Typography>
               </Box>
             </Box>
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               System Status
             </Typography>
             <Box sx={{ mt: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Total Users:</Typography>
-                <Typography variant="body2" fontWeight="bold">{stats.totalCustomers + 5}</Typography>
+                <Typography variant="body2">Total Customers:</Typography>
+                <Typography variant="body2" fontWeight="bold">{stats.totalCustomers}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">Active RMAs:</Typography>
-                <Typography variant="body2" fontWeight="bold">{stats.pendingRMAs + 8}</Typography>
+                <Typography variant="body2" fontWeight="bold">{stats.totalSales}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">Products:</Typography>

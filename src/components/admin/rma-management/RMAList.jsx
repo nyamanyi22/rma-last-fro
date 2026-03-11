@@ -50,54 +50,74 @@ const RMAList = ({ rmas, onViewDetails, onReview, userRole }) => {
 
   const getStatusChip = (status) => {
     const statusConfig = {
-      pending: { color: "warning", label: "Pending" },
-      under_review: { color: "info", label: "Under Review" },
-      approved: { color: "success", label: "Approved" },
-      rejected: { color: "error", label: "Rejected" },
-      in_repair: { color: "secondary", label: "In Repair" },
-      shipped: { color: "primary", label: "Shipped" },
-      completed: { color: "success", label: "Completed" },
+      pending: { bg: "#FFF4E5", color: "#663C00", label: "Pending" },
+      under_review: { bg: "#E5F6FD", color: "#014361", label: "Under Review" },
+      approved: { bg: "#EDF7ED", color: "#1E4620", label: "Approved" },
+      rejected: { bg: "#FDEDED", color: "#5F2120", label: "Rejected" },
+      in_repair: { bg: "#F3E5F5", color: "#4A148C", label: "In Repair" },
+      shipped: { bg: "#E3F2FD", color: "#0D47A1", label: "Shipped" },
+      completed: { bg: "#E8F5E9", color: "#1B5E20", label: "Completed" },
     };
 
-    const config = statusConfig[status] || { color: "default", label: status };
-    
+    const config = statusConfig[status] || { bg: "#EEEEEE", color: "#757575", label: status };
+
     return (
       <Chip
-        icon={getStatusIcon(status)}
+        icon={React.cloneElement(getStatusIcon(status), { style: { color: config.color, fontSize: '1.2rem' } })}
         label={config.label}
         size="small"
-        color={config.color}
-        variant="outlined"
+        sx={{
+          backgroundColor: config.bg,
+          color: config.color,
+          fontWeight: 700,
+          fontSize: '0.75rem',
+          borderRadius: 1.5,
+          border: 'none',
+          '& .MuiChip-icon': { ml: 1 }
+        }}
       />
     );
   };
 
   const getPriorityChip = (priority) => {
     const priorityConfig = {
-      high: { color: "error", label: "High" },
-      medium: { color: "warning", label: "Medium" },
-      low: { color: "success", label: "Low" },
+      high: { bg: "#FDEDED", color: "#D32F2F", label: "High" },
+      medium: { bg: "#FFF4E5", color: "#ED6C02", label: "Medium" },
+      low: { bg: "#EDF7ED", color: "#2E7D32", label: "Low" },
     };
 
-    const config = priorityConfig[priority] || { color: "default", label: priority };
-    
+    const config = priorityConfig[priority] || { bg: "#EEEEEE", color: "#757575", label: priority };
+
     return (
       <Chip
         label={config.label}
         size="small"
-        color={config.color}
-        variant="outlined"
+        sx={{
+          backgroundColor: config.bg,
+          color: config.color,
+          fontWeight: 700,
+          fontSize: '0.7rem',
+          borderRadius: 1,
+          textTransform: 'uppercase',
+          height: 20
+        }}
       />
     );
   };
 
   const getTypeChip = (type) => {
+    const isReturn = type === "return";
     return (
       <Chip
-        label={type === "return" ? "Return" : "Warranty"}
+        label={isReturn ? "Return" : "Warranty"}
         size="small"
-        color={type === "return" ? "primary" : "secondary"}
-        variant="outlined"
+        sx={{
+          backgroundColor: isReturn ? "#E8EAF6" : "#F3E5F5",
+          color: isReturn ? "#3F51B5" : "#9C27B0",
+          fontWeight: 600,
+          borderRadius: 1,
+          fontSize: '0.75rem'
+        }}
       />
     );
   };
@@ -113,12 +133,12 @@ const RMAList = ({ rmas, onViewDetails, onReview, userRole }) => {
   const canReview = (rma) => {
     // Only allow review for pending or under_review RMAs
     const reviewAllowed = ["pending", "under_review"].includes(rma.status);
-    
+
     // CSR can only review RMAs assigned to them or unassigned
     if (userRole === "csr") {
       return reviewAllowed;
     }
-    
+
     // Admin and Super Admin can review all
     return reviewAllowed;
   };
@@ -134,18 +154,16 @@ const RMAList = ({ rmas, onViewDetails, onReview, userRole }) => {
   }
 
   return (
-    <TableContainer>
-      <Table size="medium">
+    <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 3, overflow: 'auto', border: '1px solid #edf2f7', maxWidth: '100%' }}>
+      <Table size="small" sx={{ minWidth: 800 }}>
         <TableHead>
-          <TableRow>
-            <TableCell>RMA Number</TableCell>
-            <TableCell>Customer</TableCell>
-            <TableCell>Product</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Priority</TableCell>
-            <TableCell>Submitted</TableCell>
-            <TableCell align="right">Actions</TableCell>
+          <TableRow sx={{ backgroundColor: "#f8fafc" }}>
+            <TableCell sx={{ fontWeight: 700, color: "#64748b", py: 1.5, pl: 2 }}>RMA Info</TableCell>
+            <TableCell sx={{ fontWeight: 700, color: "#64748b", py: 1.5 }}>Customer</TableCell>
+            <TableCell sx={{ fontWeight: 700, color: "#64748b", py: 1.5 }}>Status & Priority</TableCell>
+            <TableCell sx={{ fontWeight: 700, color: "#64748b", py: 1.5 }}>Type</TableCell>
+            <TableCell sx={{ fontWeight: 700, color: "#64748b", py: 1.5 }}>Submitted</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 700, color: "#64748b", py: 1.5, pr: 2 }}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -153,68 +171,78 @@ const RMAList = ({ rmas, onViewDetails, onReview, userRole }) => {
             <TableRow
               key={rma.id}
               hover
-              sx={{ cursor: "pointer" }}
+              sx={{
+                cursor: "pointer",
+                '&:hover': { backgroundColor: "#f1f5f9" },
+                transition: 'background-color 0.2s'
+              }}
+              onClick={() => onViewDetails(rma)}
             >
-              <TableCell>
-                <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+              <TableCell sx={{ pl: 2, py: 1.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: "#1e293b", lineHeight: 1.2 }}>
                   {rma.rmaNumber}
                 </Typography>
+                <Typography variant="caption" sx={{ color: "#64748b", display: 'block', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {rma.productName}
+                </Typography>
               </TableCell>
-              <TableCell>
-                <Typography variant="body2">{rma.customerName}</Typography>
-                <Typography variant="caption" color="text.secondary">
+              <TableCell sx={{ py: 1.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: "#334155", lineHeight: 1.2 }}>{rma.customerName}</Typography>
+                <Typography variant="caption" sx={{ color: "#94a3b8", display: 'block' }}>
                   {rma.customerEmail}
                 </Typography>
               </TableCell>
-              <TableCell>
-                <Typography variant="body2">{rma.productName}</Typography>
+              <TableCell sx={{ py: 1.5 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-start' }}>
+                  {getStatusChip(rma.status)}
+                  {getPriorityChip(rma.priority)}
+                </Box>
               </TableCell>
-              <TableCell>
-                {getTypeChip(rma.rmaType)}
-                {rma.requiresWarrantyCheck && (
-                  <Tooltip title="Warranty validation required">
-                    <Warning fontSize="small" color="warning" sx={{ ml: 0.5 }} />
-                  </Tooltip>
-                )}
+              <TableCell sx={{ py: 1.5 }}>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  {getTypeChip(rma.rmaType)}
+                  {rma.requiresWarrantyCheck && (
+                    <Tooltip title="Warranty validation required">
+                      <Warning sx={{ fontSize: '0.9rem', color: "#f59e0b" }} />
+                    </Tooltip>
+                  )}
+                </Box>
               </TableCell>
-              <TableCell>
-                {getStatusChip(rma.status)}
-              </TableCell>
-              <TableCell>
-                {getPriorityChip(rma.priority)}
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2">
-                  {formatDate(rma.submittedDate)}
+              <TableCell sx={{ py: 1.5 }}>
+                <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 600, display: 'block' }}>
+                  {rma.formattedDate}
                 </Typography>
               </TableCell>
-              <TableCell align="right">
-                <Tooltip title="View Details">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onViewDetails(rma);
-                    }}
-                  >
-                    <Visibility fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                
-                {canReview(rma) && (
-                  <Tooltip title="Review RMA">
+              <TableCell align="right" sx={{ pr: 2, py: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Tooltip title="View Details">
                     <IconButton
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onReview(rma);
+                        onViewDetails(rma);
                       }}
-                      color="primary"
+                      sx={{ color: "#64748b", p: 0.5, '&:hover': { color: "#1e293b", bgcolor: "#f1f5f9" } }}
                     >
-                      <Assignment fontSize="small" />
+                      <Visibility fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                )}
+
+                  {canReview(rma) && (
+                    <Tooltip title="Review RMA">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReview(rma);
+                        }}
+                        sx={{ color: "#2563eb", p: 0.5, ml: 0.5, '&:hover': { bgcolor: "#eff6ff" } }}
+                      >
+                        <Assignment fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
               </TableCell>
             </TableRow>
           ))}

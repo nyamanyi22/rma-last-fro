@@ -4,200 +4,202 @@ import {
   Typography,
   Grid,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
   Divider,
   Alert,
+  Chip,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
 } from "@mui/material";
-import { CheckCircle, Warning, Info } from "@mui/icons-material";
+import {
+  CheckCircle,
+  Warning,
+  Info,
+  Inventory,
+  Description,
+  Receipt,
+  Person,
+  Email,
+  Phone,
+  LocationOn,
+  AttachFile
+} from "@mui/icons-material";
 
 const RMAFormStep3 = ({ formData, rmaType }) => {
-  // Format date for display
-  const formatDate = (dateString) => {
-    if (!dateString) return "Not provided";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (date) => {
+    if (!date) return "Not provided";
+    return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
   };
 
-  // Get product name from ID (in real app, fetch from API)
-  const getProductName = () => {
-    const products = [
-      { id: "1", name: "Dell XPS 13 Laptop" },
-      { id: "2", name: "HP Pavilion Desktop" },
-      { id: "3", name: "Logitech MX Master 3" },
-      { id: "4", name: "Samsung 27\" Monitor" },
-      { id: "5", name: "Apple MacBook Pro 14\"" },
-    ];
-    const product = products.find(p => p.id === formData.productId);
-    return product ? product.name : "Not selected";
+  const getTypeLabel = () => {
+    return rmaType === 'return' ? 'Simple Return' :
+      rmaType === 'warranty' ? 'Warranty Claim' :
+        'Repair Request';
   };
 
-  // Get reason label
   const getReasonLabel = () => {
-    const returnReasons = [
-      { value: "shipping_damage", label: "Shipping Damage" },
-      { value: "wrong_item", label: "Wrong Item Received" },
-      { value: "defective_on_arrival", label: "Defective on Arrival" },
-      { value: "customer_return", label: "Customer Return" },
-      { value: "other_return", label: "Other" },
-    ];
-
-    const warrantyReasons = [
-      { value: "product_failure", label: "Product Failure" },
-      { value: "hardware_defect", label: "Hardware Defect" },
-      { value: "software_issue", label: "Software Issue" },
-      { value: "physical_damage", label: "Physical Damage" },
-      { value: "performance_issue", label: "Performance Issue" },
-      { value: "other_warranty", label: "Other" },
-    ];
-
-    const reasons = rmaType === "return" ? returnReasons : warrantyReasons;
-    const reason = reasons.find(r => r.value === formData.reason);
-    return reason ? reason.label : "Not specified";
+    const reasons = {
+      shipping_damage: "Shipping Damage",
+      wrong_item: "Wrong Item Received",
+      defective_on_arrival: "Defective on Arrival",
+      customer_return: "Customer Return",
+      product_failure: "Product Failure",
+      hardware_defect: "Hardware Defect",
+      software_issue: "Software Issue",
+      physical_damage: "Physical Damage",
+      performance_issue: "Performance Issue",
+      other: "Other"
+    };
+    return reasons[formData.reason] || formData.reason;
   };
 
   return (
     <Box>
       <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
-        Step 3: Review & Submit
+        Step 3: Review Your Request
       </Typography>
 
-      <Alert severity="info" icon={<Info />} sx={{ mb: 4, borderRadius: 2 }}>
+      <Alert severity="info" icon={<Info />} sx={{ mb: 3 }}>
         Please review all information before submitting. You cannot edit after submission.
       </Alert>
 
       <Grid container spacing={3}>
         {/* RMA Type Summary */}
-        <Grid size={{ xs: 12 }}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              bgcolor: rmaType === 'return' ? 'warning.lighter' : 'primary.lighter',
-              color: rmaType === 'return' ? 'warning.dark' : 'primary.dark',
-              border: '1px solid',
-              borderColor: rmaType === 'return' ? 'warning.light' : 'primary.light',
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center'
-            }}
-          >
-            <Box sx={{ mr: 2, display: 'flex' }}>
-              {rmaType === "return" ? (
-                <Warning color="warning" fontSize="large" />
-              ) : (
-                <CheckCircle color="primary" fontSize="large" />
-              )}
-            </Box>
-            <Box>
-              <Typography variant="h6" fontWeight="bold">
-                {rmaType === "return" ? "Simple Return Request" : "Warranty/Repair Claim"}
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                {rmaType === "return"
-                  ? "No warranty validation required. Admin will review based on uploaded proof."
-                  : "Warranty will be validated against purchase date. Please ensure receipt is uploaded."}
-              </Typography>
+        <Grid size={12}>
+          <Paper sx={{ p: 2, bgcolor: rmaType === 'return' ? 'warning.50' : 'primary.50' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {rmaType === 'return' ?
+                <Warning color="warning" /> :
+                <CheckCircle color="primary" />
+              }
+              <Typography variant="h6">{getTypeLabel()}</Typography>
             </Box>
           </Paper>
         </Grid>
 
         {/* Product Information */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, height: '100%' }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', borderBottom: '1px solid', borderColor: 'divider', pb: 1, mb: 2 }}>
-              Product Information
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Inventory /> Product Information
             </Typography>
-
-            <Box sx={{ display: 'grid', gap: 2 }}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Product</Typography>
-                <Typography variant="body1" fontWeight={500}>{getProductName()}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Serial Number</Typography>
-                <Typography variant="body1" fontWeight={500}>{formData.serialNumber || "Not provided"}</Typography>
-              </Box>
-
-              {rmaType === "warranty" && (
-                <>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Purchase Date</Typography>
-                    <Typography variant="body1" fontWeight={500}>{formatDate(formData.purchaseDate)}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Receipt Number</Typography>
-                    <Typography variant="body1" fontWeight={500}>{formData.receiptNumber || "Not provided"}</Typography>
-                  </Box>
-                </>
+            <List dense>
+              <ListItem>
+                <ListItemText
+                  primary="Product"
+                  secondary={formData.product?.name || "Not selected"}
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText
+                  primary="Serial Number"
+                  secondary={formData.serialNumber || "Not provided"}
+                />
+              </ListItem>
+              {formData.receiptNumber && (
+                <ListItem>
+                  <ListItemText
+                    primary="Receipt Number"
+                    secondary={formData.receiptNumber}
+                  />
+                </ListItem>
               )}
-            </Box>
+            </List>
           </Paper>
         </Grid>
 
         {/* Issue Details */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, height: '100%' }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', borderBottom: '1px solid', borderColor: 'divider', pb: 1, mb: 2 }}>
-              Issue Details
+          <Paper sx={{ p: 2, height: '100%' }}>
+            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Description /> Issue Details
             </Typography>
-
-            <Box sx={{ display: 'grid', gap: 2 }}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Reason</Typography>
-                <Typography variant="body1" fontWeight={500}>{getReasonLabel()}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Description</Typography>
-                <Typography variant="body2" sx={{ bgcolor: 'grey.50', p: 1.5, borderRadius: 1, border: '1px dashed', borderColor: 'divider' }}>
-                  {formData.issueDescription || "No description provided"}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Attachments</Typography>
-                <Typography variant="body1" fontWeight={500}>{formData.attachments.length} file(s) ready for upload</Typography>
-              </Box>
-            </Box>
+            <List dense>
+              <ListItem>
+                <ListItemText
+                  primary="Reason"
+                  secondary={getReasonLabel()}
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText
+                  primary="Description"
+                  secondary={formData.issueDescription || "No description"}
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText
+                  primary="Attachments"
+                  secondary={`${formData.attachments?.length || 0} file(s) ready to upload`}
+                />
+              </ListItem>
+            </List>
           </Paper>
         </Grid>
 
+        {/* Purchase Information (for warranty) */}
+        {(rmaType === 'warranty' || rmaType === 'repair') && (
+          <Grid size={12}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Receipt /> Purchase Information
+              </Typography>
+              <List dense>
+                <ListItem>
+                  <ListItemText
+                    primary="Purchase Date"
+                    secondary={formatDate(formData.purchaseDate)}
+                  />
+                </ListItem>
+              </List>
+            </Paper>
+          </Grid>
+        )}
+
         {/* Contact Information */}
-        <Grid size={{ xs: 12 }}>
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', borderBottom: '1px solid', borderColor: 'divider', pb: 1, mb: 2 }}>
-              Contact & Shipping
+        <Grid size={12}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Person /> Contact Information
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Box sx={{ mb: 1 }}>
-                  <Typography variant="caption" color="text.secondary">Contact Name</Typography>
-                  <Typography variant="body1" fontWeight={500}>{formData.contactName}</Typography>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Person fontSize="small" color="action" />
+                  <Typography>{formData.contactName || "Not provided"}</Typography>
                 </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Email</Typography>
-                  <Typography variant="body1" fontWeight={500}>{formData.contactEmail}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Email fontSize="small" color="action" />
+                  <Typography>{formData.contactEmail || "Not provided"}</Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Box sx={{ mb: 1 }}>
-                  <Typography variant="caption" color="text.secondary">Phone</Typography>
-                  <Typography variant="body1" fontWeight={500}>{formData.contactPhone || "Not provided"}</Typography>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Phone fontSize="small" color="action" />
+                  <Typography>{formData.contactPhone || "Not provided"}</Typography>
                 </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Shipping Address</Typography>
-                  <Typography variant="body1" fontWeight={500} sx={{ whiteSpace: 'pre-line' }}>{formData.shippingAddress || "Not provided"}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <LocationOn fontSize="small" color="action" />
+                  <Typography>{formData.shippingAddress || "Not provided"}</Typography>
                 </Box>
               </Grid>
             </Grid>
           </Paper>
         </Grid>
+
+        {/* Warranty Notice for Expired Warranty */}
+        {rmaType === 'warranty' && formData.purchaseDate && (
+          <Grid size={12}>
+            <Alert severity="warning">
+              Warranty claim submitted. Our team will verify your warranty status.
+            </Alert>
+          </Grid>
+        )}
       </Grid>
     </Box>
   );

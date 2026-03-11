@@ -64,11 +64,11 @@ const SuperAdminLayout = () => {
 
     const menuItems = [
         { text: 'Dashboard', icon: <Dashboard />, path: '/super-admin/dashboard' },
-        { text: 'Staff Management', icon: <People />, path: '/super-admin/staff' },
         { text: 'RMA Management', icon: <Assignment />, path: '/super-admin/rma' },
         { text: 'Product Management', icon: <Inventory />, path: '/super-admin/products' },
         { text: 'Customer Management', icon: <Group />, path: '/super-admin/customers' },
         { text: 'Sales Management', icon: <Receipt />, path: '/super-admin/sales' },
+        { text: 'Staff Management', icon: <People />, path: '/super-admin/staff' },
         { text: 'Security', icon: <Security />, path: '/super-admin/security' },
         { text: 'Settings', icon: <Settings />, path: '/super-admin/settings' },
         { text: 'Reports', icon: <BarChart />, path: '/super-admin/reports' },

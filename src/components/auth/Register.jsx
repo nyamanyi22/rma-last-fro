@@ -395,7 +395,7 @@ const Register = () => {
           {renderStepContent(activeStep)}
 
           <Grid container justifyContent="center" sx={{ mt: 3 }}>
-            <Grid item>
+            <Grid>
               <Link component={RouterLink} to="/login" variant="body2">
                 Already have an account? Sign in
               </Link>

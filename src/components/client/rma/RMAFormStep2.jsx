@@ -1,4 +1,4 @@
-﻿import React, { useRef } from "react";
+﻿import React, { useRef, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -17,76 +17,97 @@ import {
   Alert,
   Paper,
   Divider,
+  Chip
 } from "@mui/material";
 import {
   AttachFile,
   Delete,
   Image,
   Description,
+  Warning
 } from "@mui/icons-material";
 
 // RMA Reasons based on type
-const RETURN_REASONS = [
-  { value: "shipping_damage", label: "Shipping Damage" },
-  { value: "wrong_item", label: "Wrong Item Received" },
-  { value: "defective_on_arrival", label: "Defective on Arrival (DOA)" },
-  { value: "customer_return", label: "Change of Mind / Return" },
-  { value: "other_return", label: "Other Return Reason" },
-];
-
-const WARRANTY_REASONS = [
-  { value: "product_failure", label: "Product Failure / Not Working" },
-  { value: "hardware_defect", label: "Hardware Defect" },
-  { value: "software_issue", label: "Software Issue" },
-  { value: "physical_damage", label: "Physical Damage (may affect warranty)" },
-  { value: "performance_issue", label: "Performance Issue" },
-  { value: "other_warranty", label: "Other Issue" },
-];
+const REASONS = {
+  simple_return: [
+    { value: "shipping_damage", label: "Shipping Damage", description: "Item damaged during shipping" },
+    { value: "wrong_item", label: "Wrong Item Received", description: "Received different product than ordered" },
+    { value: "defective_on_arrival", label: "Defective on Arrival (DOA)", description: "Product didn't work when received" },
+    { value: "customer_return", label: "Change of Mind", description: "No longer want/need the item" },
+    { value: "other_return", label: "Other Return Reason", description: "Other reason not listed" },
+  ],
+  warranty_repair: [
+    { value: "product_failure", label: "Product Failure", description: "Product stopped working" },
+    { value: "hardware_defect", label: "Hardware Defect", description: "Physical component issue" },
+    { value: "software_issue", label: "Software Issue", description: "Software/OS problems" },
+    { value: "performance_issue", label: "Performance Issue", description: "Slow or not performing as expected" },
+    { value: "physical_damage", label: "Physical Damage", description: "Accidental damage (may not be covered)" },
+    { value: "other_warranty", label: "Other Issue", description: "Other issue not listed" },
+  ]
+};
 
 const RMAFormStep2 = ({ formData, onChange, rmaType }) => {
   const fileInputRef = useRef(null);
-  const reasons = rmaType === "return" ? RETURN_REASONS : WARRANTY_REASONS;
+  const reasons = REASONS[rmaType] || REASONS.simple_return;
 
-  const handleFileUpload = (event) => {
+  // Clean up preview URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      if (formData.attachments) {
+        formData.attachments.forEach(att => {
+          if (att.preview) {
+            URL.revokeObjectURL(att.preview);
+          }
+        });
+      }
+    };
+  }, []);
+
+  const handleFileUpload = async (event) => {
     const files = Array.from(event.target.files);
 
-    // Validate file types and sizes
+    // Validate files
     const validFiles = files.filter(file => {
       const isValidType = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'].includes(file.type);
-      const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB max
+      const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
       return isValidType && isValidSize;
     });
 
+    if (validFiles.length !== files.length) {
+      alert("Some files were skipped. Only JPG, PNG, PDF files under 5MB are allowed.");
+    }
+
+    // Store ONLY the File objects, create preview URLs for display
     const newAttachments = validFiles.map(file => ({
       id: Date.now() + Math.random(),
       name: file.name,
       type: file.type,
       size: file.size,
-      file: file,
+      file: file, // ✅ This is what matters for upload!
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
     }));
 
     onChange("attachments", [...formData.attachments, ...newAttachments]);
+
+    // Clear input
+    event.target.value = '';
   };
 
   const handleRemoveFile = (id) => {
-    const updatedAttachments = formData.attachments.filter(file => file.id !== id);
-    onChange("attachments", updatedAttachments);
-  };
+    // Clean up preview URL to avoid memory leaks
+    const fileToRemove = formData.attachments.find(f => f.id === id);
+    if (fileToRemove?.preview) {
+      URL.revokeObjectURL(fileToRemove.preview);
+    }
 
-  const handleDescriptionChange = (event) => {
-    const description = event.target.value;
-    onChange("issueDescription", description);
+    const updated = formData.attachments.filter(f => f.id !== id);
+    onChange("attachments", updated);
   };
 
   const getFileIcon = (fileType) => {
-    if (fileType.startsWith('image/')) {
-      return <Image color="primary" />;
-    } else if (fileType === 'application/pdf') {
-      return <Description color="error" />;
-    } else {
-      return <AttachFile />;
-    }
+    if (fileType?.startsWith('image/')) return <Image color="primary" />;
+    if (fileType === 'application/pdf') return <Description color="error" />;
+    return <AttachFile />;
   };
 
   const formatFileSize = (bytes) => {
@@ -101,23 +122,27 @@ const RMAFormStep2 = ({ formData, onChange, rmaType }) => {
         Step 2: Describe Issue & Upload Proof
       </Typography>
 
-      <Grid container spacing={4}>
+      <Grid container spacing={3}>
         {/* Reason Selection */}
         <Grid size={{ xs: 12 }}>
           <FormControl fullWidth required>
-            <InputLabel>Select Reason for RMA</InputLabel>
+            <InputLabel>Reason for {rmaType === 'return' ? 'Return' : rmaType === 'warranty' ? 'Warranty Claim' : 'Repair'}</InputLabel>
             <Select
-              value={formData.reason}
+              value={formData.reason || ""}
               onChange={(e) => onChange("reason", e.target.value)}
-              label="Select Reason for RMA"
-              sx={{ borderRadius: 2 }}
+              label={`Reason for ${rmaType === 'return' ? 'Return' : rmaType === 'warranty' ? 'Warranty Claim' : 'Repair'}`}
             >
               <MenuItem value="">
                 <em>Select a reason</em>
               </MenuItem>
               {reasons.map((reason) => (
                 <MenuItem key={reason.value} value={reason.value}>
-                  {reason.label}
+                  <Box>
+                    <Typography variant="body2">{reason.label}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {reason.description}
+                    </Typography>
+                  </Box>
                 </MenuItem>
               ))}
             </Select>
@@ -128,68 +153,61 @@ const RMAFormStep2 = ({ formData, onChange, rmaType }) => {
         <Grid size={{ xs: 12 }}>
           <TextField
             fullWidth
-            label="Issue Description *"
+            label="Describe the Issue *"
             multiline
-            rows={6}
-            value={formData.issueDescription}
-            onChange={handleDescriptionChange}
+            rows={4}
+            value={formData.issueDescription || ""}
+            onChange={(e) => onChange("issueDescription", e.target.value)}
             required
-            helperText={`${formData.issueDescription.length}/1000 characters. Please describe the issue in detail.`}
-            inputProps={{ maxLength: 1000 }}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            helperText={`${formData.issueDescription?.length || 0}/500 characters. Please be detailed.`}
+            inputProps={{ maxLength: 500 }}
           />
         </Grid>
 
-        {/* File Upload */}
-        <Grid item xs={12}>
+        {/* File Upload Area */}
+        <Grid size={{ xs: 12 }}>
           <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 1 }}>
-            Proof of Issue / Documents
+            Supporting Documents
           </Typography>
 
-          <Box
+          <input
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.pdf"
+            onChange={handleFileUpload}
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+          />
+
+          <Paper
+            variant="outlined"
             sx={{
-              border: '2px dashed',
-              borderColor: 'grey.300',
-              borderRadius: 3,
-              p: 4,
+              p: 3,
               textAlign: 'center',
               bgcolor: 'grey.50',
+              borderStyle: 'dashed',
               cursor: 'pointer',
-              transition: 'all 0.2s',
-              '&:hover': {
-                borderColor: 'primary.main',
-                bgcolor: 'primary.50'
-              }
+              '&:hover': { bgcolor: 'grey.100' }
             }}
             onClick={() => fileInputRef.current.click()}
           >
-            <input
-              type="file"
-              multiple
-              accept=".jpg,.jpeg,.png,.pdf"
-              onChange={handleFileUpload}
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-            />
             <AttachFile sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
-            <Typography variant="h6" color="text.primary" gutterBottom>
-              Click to Upload Files
+            <Typography variant="body1">Click to upload files</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Supported: JPG, PNG, PDF (Max 5MB each)
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Supported formats: JPG, PNG, PDF (Max 5MB)
-            </Typography>
-          </Box>
+          </Paper>
 
           {/* Uploaded Files List */}
-          {formData.attachments.length > 0 && (
-            <Paper variant="outlined" sx={{ mt: 3, borderRadius: 2, overflow: 'hidden' }}>
-              <List disablePadding>
+          {formData.attachments?.length > 0 && (
+            <Paper variant="outlined" sx={{ mt: 2 }}>
+              <List dense>
                 {formData.attachments.map((file, index) => (
                   <React.Fragment key={file.id}>
                     {index > 0 && <Divider />}
                     <ListItem
                       secondaryAction={
-                        <IconButton edge="end" onClick={(e) => { e.stopPropagation(); handleRemoveFile(file.id); }}>
+                        <IconButton edge="end" onClick={() => handleRemoveFile(file.id)}>
                           <Delete />
                         </IconButton>
                       }
@@ -199,8 +217,16 @@ const RMAFormStep2 = ({ formData, onChange, rmaType }) => {
                       </ListItemIcon>
                       <ListItemText
                         primary={file.name}
-                        secondary={`${formatFileSize(file.size)}`}
+                        secondary={formatFileSize(file.size)}
                       />
+                      {file.preview && (
+                        <Box
+                          component="img"
+                          src={file.preview}
+                          sx={{ width: 40, height: 40, objectFit: 'cover', ml: 2, borderRadius: 1 }}
+                          alt="preview"
+                        />
+                      )}
                     </ListItem>
                   </React.Fragment>
                 ))}
@@ -208,23 +234,14 @@ const RMAFormStep2 = ({ formData, onChange, rmaType }) => {
             </Paper>
           )}
 
-          {/* Upload Requirements based on RMA type */}
-          <Alert severity="info" sx={{ mt: 3, borderRadius: 2 }}>
-            <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-              Required Documents:
-            </Typography>
+          {/* Requirements Info */}
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="subtitle2">Required Documents:</Typography>
             <Typography variant="body2">
               {rmaType === "return" ? (
-                <>
-                  • Photo of damaged/wrong item<br />
-                  • Delivery note/shipping label
-                </>
+                "• Photo of item/damage • Delivery note (if available)"
               ) : (
-                <>
-                  • Purchase receipt/invoice (REQUIRED)<br />
-                  • Photos showing the defect/issue<br />
-                  • Serial number photo (if available)
-                </>
+                "• Purchase receipt/invoice • Photos showing the issue"
               )}
             </Typography>
           </Alert>

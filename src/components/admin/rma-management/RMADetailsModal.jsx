@@ -21,12 +21,13 @@ import {
   TextField,
   IconButton,
   Tooltip,
+  Fade,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Close,
   Download,
   Email,
-  Phone,
   LocationOn,
   CalendarToday,
   Receipt,
@@ -35,12 +36,15 @@ import {
   CheckCircle,
   Cancel,
   Comment,
-  History,
+  VisibilityOutlined,
+  InsertDriveFileOutlined,
 } from "@mui/icons-material";
+import rmaService from "../../../services/api/rmaService";
 
 const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   if (!rma) return null;
 
@@ -48,29 +52,51 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
     setActiveTab(newValue);
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (comment.trim()) {
-      // In real app, save comment to API
-      alert(`Comment added: ${comment}`);
-      setComment("");
+      setSubmitting(true);
+      try {
+        const response = await rmaService.addComment(rma.id, comment, 'internal');
+        if (response.success) {
+          setComment("");
+          alert("Internal comment added successfully");
+        }
+      } catch (error) {
+        console.error("Error adding comment:", error);
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: "warning",
-      under_review: "info",
-      approved: "success",
-      rejected: "error",
-      in_repair: "secondary",
-      shipped: "primary",
-      completed: "success",
+      pending: "#ed6c02",
+      under_review: "#0288d1",
+      approved: "#2e7d32",
+      rejected: "#d32f2f",
+      in_repair: "#9c27b0",
+      shipped: "#1976d2",
+      completed: "#2e7d32",
     };
-    return colors[status] || "default";
+    return colors[status] || "#757575";
+  };
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      pending: "Pending Review",
+      under_review: "Under Review",
+      approved: "Approved",
+      rejected: "Rejected",
+      in_repair: "In Repair",
+      shipped: "Shipped",
+      completed: "Completed",
+    };
+    return labels[status] || status;
   };
 
   const getTypeLabel = (type) => {
-    return type === "return" ? "Simple Return" : "Warranty/Repair Claim";
+    return type === "return" ? "Simple Return" : "Warranty Claim";
   };
 
   const getReasonLabel = (reason) => {
@@ -88,104 +114,122 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
     return reasons[reason] || reason;
   };
 
-  // Mock data for attachments
-  const attachments = [
-    { id: 1, name: "receipt.pdf", type: "pdf", size: "1.2 MB" },
-    { id: 2, name: "damage_photo1.jpg", type: "image", size: "2.5 MB" },
-    { id: 3, name: "damage_photo2.jpg", type: "image", size: "3.1 MB" },
-  ];
-
-  // Mock status history
-  const statusHistory = [
-    { date: "2024-01-15 10:30", status: "pending", user: "System", notes: "RMA submitted by customer" },
-    { date: "2024-01-15 14:45", status: "under_review", user: "Admin User", notes: "Assigned for review" },
-  ];
-
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{ sx: { borderRadius: 4, backgroundImage: 'none' } }}
+    >
+      <DialogTitle sx={{ p: 3, pb: 0 }}>
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="h6">
-            RMA Details: {rma.rmaNumber}
-          </Typography>
-          <IconButton onClick={onClose} size="small">
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>RMA Summary</Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, fontFamily: 'monospace' }}>
+              #{rma.rmaNumber}
+            </Typography>
+          </Box>
+          <IconButton onClick={onClose} sx={{ bgcolor: 'grey.100' }}>
             <Close />
           </IconButton>
         </Box>
       </DialogTitle>
-      
-      <DialogContent dividers>
-        {/* Header with quick actions */}
-        <Paper sx={{ p: 2, mb: 3, bgcolor: "grey.50" }}>
+
+      <DialogContent sx={{ p: 3 }}>
+        {/* Header Summary */}
+        <Paper sx={{ p: 2, mb: 3, bgcolor: alpha('#f5f5f5', 0.5), borderRadius: 3, border: '1px dashed', borderColor: 'divider' }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
-              <Typography variant="subtitle2">Status</Typography>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Typography variant="overline" sx={{ fontWeight: 700, display: 'block' }}>Status</Typography>
               <Chip
-                label={rma.status.toUpperCase()}
-                color={getStatusColor(rma.status)}
-                size="small"
-                sx={{ fontWeight: "bold" }}
+                label={getStatusLabel(rma.status)}
+                sx={{
+                  bgcolor: alpha(getStatusColor(rma.status), 0.1),
+                  color: getStatusColor(rma.status),
+                  fontWeight: 900,
+                  borderRadius: 2
+                }}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
-              <Typography variant="subtitle2">RMA Type</Typography>
-              <Typography variant="body1">{getTypeLabel(rma.rmaType)}</Typography>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Typography variant="overline" sx={{ fontWeight: 700, display: 'block' }}>RMA Type</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{getTypeLabel(rma.rmaType)}</Typography>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <Typography variant="subtitle2">Priority</Typography>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Typography variant="overline" sx={{ fontWeight: 700, display: 'block' }}>Priority</Typography>
               <Chip
-                label={rma.priority.toUpperCase()}
-                color={rma.priority === "high" ? "error" : rma.priority === "medium" ? "warning" : "success"}
+                label={(rma.priority || 'medium').toUpperCase()}
                 size="small"
+                color={rma.priority === "high" ? "error" : "default"}
+                sx={{ fontWeight: 800 }}
               />
             </Grid>
           </Grid>
         </Paper>
 
-        {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
-          <Tabs value={activeTab} onChange={handleTabChange}>
-            <Tab label="Overview" />
-            <Tab label="Attachments" />
-            <Tab label="Status History" />
-            <Tab label="Warranty Info" />
-          </Tabs>
-        </Box>
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="Entity Overview" sx={{ fontWeight: 700, textTransform: 'none' }} />
+          <Tab label={`Documentation (${rma.attachments?.length || 0})`} sx={{ fontWeight: 700, textTransform: 'none' }} />
+          <Tab label="Audit Logistics" sx={{ fontWeight: 700, textTransform: 'none' }} />
+        </Tabs>
 
-        {/* Tab Content */}
         {activeTab === 0 && (
           <Grid container spacing={3}>
-            {/* Customer Info */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: "bold" }}>
-                  Customer Information
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Paper sx={{ p: 2, borderRadius: 3, height: '100%', border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Email fontSize="small" /> Customer Entity
                 </Typography>
                 <TableContainer>
                   <Table size="small">
                     <TableBody>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: "bold", border: "none" }}>Name:</TableCell>
-                        <TableCell sx={{ border: "none" }}>{rma.customerName}</TableCell>
+                      <TableRow sx={{ '& td': { border: 'none', py: 0.5 } }}>
+                        <TableCell sx={{ fontWeight: 700, color: 'text.secondary', width: '30%' }}>Identity</TableCell>
+                        <TableCell>{rma.customerName}</TableCell>
                       </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: "bold", border: "none" }}>
-                          <Email fontSize="small" sx={{ mr: 1, verticalAlign: "middle" }} />
-                          Email:
-                        </TableCell>
-                        <TableCell sx={{ border: "none" }}>{rma.customerEmail}</TableCell>
+                      <TableRow sx={{ '& td': { border: 'none', py: 0.5 } }}>
+                        <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Account</TableCell>
+                        <TableCell>{rma.customerEmail}</TableCell>
                       </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: "bold", border: "none" }}>Phone:</TableCell>
-                        <TableCell sx={{ border: "none" }}>+1 (555) 123-4567</TableCell>
+                      <TableRow sx={{ '& td': { border: 'none', py: 0.5 } }}>
+                        <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Contact</TableCell>
+                        <TableCell>{rma.contactPhone}</TableCell>
                       </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: "bold", border: "none" }}>
-                          <LocationOn fontSize="small" sx={{ mr: 1, verticalAlign: "middle" }} />
-                          Address:
-                        </TableCell>
-                        <TableCell sx={{ border: "none" }}>
-                          123 Main St, Anytown, USA 12345
+                      <TableRow sx={{ '& td': { border: 'none', py: 0.5 } }}>
+                        <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Destination</TableCell>
+                        <TableCell>{rma.shippingAddress}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Paper sx={{ p: 2, borderRadius: 3, height: '100%', border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Receipt fontSize="small" /> Product Logistics
+                </Typography>
+                <TableContainer>
+                  <Table size="small">
+                    <TableBody>
+                      <TableRow sx={{ '& td': { border: 'none', py: 0.5 } }}>
+                        <TableCell sx={{ fontWeight: 700, color: 'text.secondary', width: '30%' }}>Asset</TableCell>
+                        <TableCell>{rma.productName}</TableCell>
+                      </TableRow>
+                      <TableRow sx={{ '& td': { border: 'none', py: 0.5 } }}>
+                        <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Serial/ID</TableCell>
+                        <TableCell>{rma.serialNumber || 'N/A'}</TableCell>
+                      </TableRow>
+                      <TableRow sx={{ '& td': { border: 'none', py: 0.5 } }}>
+                        <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>Reason</TableCell>
+                        <TableCell>
+                          <Chip label={getReasonLabel(rma.reason)} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -194,200 +238,132 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
               </Paper>
             </Grid>
 
-            {/* Product Info */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: "bold" }}>
-                  Product Information
+            <Grid size={{ xs: 12 }}>
+              <Paper sx={{ p: 2, borderRadius: 3, bgcolor: alpha('#f5f5f5', 0.3), border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Issue Narration</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
+                  {rma.issueDescription}
                 </Typography>
-                <TableContainer>
-                  <Table size="small">
-                    <TableBody>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: "bold", border: "none" }}>Product:</TableCell>
-                        <TableCell sx={{ border: "none" }}>{rma.productName}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: "bold", border: "none" }}>Serial Number:</TableCell>
-                        <TableCell sx={{ border: "none" }}>SN-1234567890</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: "bold", border: "none" }}>
-                          <CalendarToday fontSize="small" sx={{ mr: 1, verticalAlign: "middle" }} />
-                          Purchase Date:
-                        </TableCell>
-                        <TableCell sx={{ border: "none" }}>2024-01-01</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: "bold", border: "none" }}>
-                          <Receipt fontSize="small" sx={{ mr: 1, verticalAlign: "middle" }} />
-                          Receipt No:
-                        </TableCell>
-                        <TableCell sx={{ border: "none" }}>INV-2024-00123</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Paper>
-            </Grid>
-
-            {/* Issue Details */}
-            <Grid item xs={12}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: "bold" }}>
-                  Issue Details
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2"><strong>Reason:</strong> {getReasonLabel(rma.reason)}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="body2"><strong>Submitted:</strong> {rma.submittedDate}</Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="body2"><strong>Description:</strong></Typography>
-                    <Typography variant="body2" sx={{ mt: 1, p: 1, bgcolor: "grey.50", borderRadius: 1 }}>
-                      The product stopped working after 2 weeks of use. The screen flickers and the device overheats. Tried resetting but issue persists.
-                    </Typography>
-                  </Grid>
-                </Grid>
               </Paper>
             </Grid>
           </Grid>
         )}
 
         {activeTab === 1 && (
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>
-              Attached Files ({attachments.length})
-            </Typography>
-            <Grid container spacing={2}>
-              {attachments.map((file) => (
-                <Grid item xs={12} sm={6} md={4} key={file.id}>
-                  <Paper sx={{ p: 2, display: "flex", alignItems: "center" }}>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="body2">{file.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {file.type.toUpperCase()} • {file.size}
-                      </Typography>
-                    </Box>
-                    <Tooltip title="Download">
-                      <IconButton size="small">
-                        <Download fontSize="small" />
+          <Box sx={{ py: 2 }}>
+            {rma.attachments && rma.attachments.length > 0 ? (
+              <Grid container spacing={2}>
+                {rma.attachments.map((file, index) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
+                    <Paper
+                      sx={{
+                        p: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        borderRadius: 3,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        "&:hover": { bgcolor: alpha('#1976d2', 0.02), borderColor: 'primary.main' }
+                      }}
+                    >
+                      <InsertDriveFileOutlined sx={{ mr: 2, color: "primary.main" }} />
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
+                          {file.filename || `File ${index + 1}`}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {file.mime_type || "Document"}
+                        </Typography>
+                      </Box>
+                      <IconButton size="small" onClick={() => window.open(file.file_url, "_blank")}>
+                        <VisibilityOutlined fontSize="small" />
                       </IconButton>
-                    </Tooltip>
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Box sx={{ py: 8, textAlign: "center", bgcolor: alpha('#f5f5f5', 0.5), borderRadius: 4, border: '1px dashed', borderColor: 'divider' }}>
+                <Typography color="text.secondary" sx={{ fontWeight: 600 }}>No digital documentation was attached to this request.</Typography>
+              </Box>
+            )}
           </Box>
         )}
 
         {activeTab === 2 && (
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>
-              Status History
-            </Typography>
-            {statusHistory.map((history, index) => (
-              <Paper key={index} sx={{ p: 2, mb: 2 }}>
-                <Grid container spacing={1}>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2"><strong>Date:</strong> {history.date}</Typography>
+          <Box sx={{ py: 2 }}>
+            {rma.statusHistory && rma.statusHistory.length > 0 ? (
+              rma.statusHistory.map((history, index) => (
+                <Paper key={index} sx={{ p: 2, mb: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid size={{ xs: 12, md: 3 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block' }}>Timestamp</Typography>
+                      <Typography variant="body2">{new Date(history.created_at).toLocaleString()}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 2 }}>
+                      <Chip
+                        label={getStatusLabel(history.new_status)}
+                        size="small"
+                        sx={{ bgcolor: alpha(getStatusColor(history.new_status), 0.1), color: getStatusColor(history.new_status), fontWeight: 800 }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block' }}>Modifier</Typography>
+                      <Typography variant="body2">{history.changed_by?.name || 'System Auto'}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block' }}>Operational Notes</Typography>
+                      <Typography variant="body2" sx={{ fontStyle: 'italic' }}>{history.notes || 'None recorded'}</Typography>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} md={2}>
-                    <Typography variant="body2"><strong>Status:</strong> {history.status}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Typography variant="body2"><strong>User:</strong> {history.user}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2"><strong>Notes:</strong> {history.notes}</Typography>
-                  </Grid>
-                </Grid>
-              </Paper>
-            ))}
+                </Paper>
+              ))
+            ) : (
+              <Box sx={{ py: 8, textAlign: "center", bgcolor: alpha('#f5f5f5', 0.5), borderRadius: 4, border: '1px dashed', borderColor: 'divider' }}>
+                <Typography color="text.secondary" sx={{ fontWeight: 600 }}>No audit logistics trail exists for this transaction.</Typography>
+              </Box>
+            )}
           </Box>
         )}
-
-        {activeTab === 3 && rma.rmaType === "warranty" && (
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>
-              Warranty Information
-            </Typography>
-            <Paper sx={{ p: 2 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2"><strong>Warranty Status:</strong></Typography>
-                  <Chip
-                    label={rma.warrantyValid ? "VALID" : "EXPIRED"}
-                    color={rma.warrantyValid ? "success" : "error"}
-                    sx={{ mt: 1 }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2"><strong>Warranty Period:</strong> 12 months</Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2"><strong>Purchase Date:</strong> 2024-01-01</Typography>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="body2"><strong>Warranty Expiry:</strong> 2024-12-31</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body2"><strong>Validation Notes:</strong></Typography>
-                  <Typography variant="body2" sx={{ mt: 1, p: 1, bgcolor: "grey.50", borderRadius: 1 }}>
-                    Warranty validated against purchase records. Product is within warranty period.
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Box>
-        )}
-
-        {/* Comments Section */}
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Add Internal Comment
-          </Typography>
-          <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              placeholder="Add internal note or comment..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              size="small"
-            />
-            <Button
-              variant="contained"
-              startIcon={<Comment />}
-              onClick={handleAddComment}
-              disabled={!comment.trim()}
-            >
-              Add
-            </Button>
-          </Box>
-        </Box>
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+      <DialogActions sx={{ p: 3, pt: 0, gap: 1 }}>
+        <Box sx={{ flexGrow: 1 }}>
+          <TextField
+            size="small"
+            placeholder="Add internal operational note..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            disabled={submitting}
+            sx={{ width: '100%', '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+            InputProps={{
+              endAdornment: (
+                <IconButton onClick={handleAddComment} disabled={!comment.trim() || submitting} size="small" color="primary">
+                  <Comment />
+                </IconButton>
+              )
+            }}
+          />
+        </Box>
+        <Button onClick={onClose} variant="text" sx={{ borderRadius: 2, fontWeight: 700 }}>Dismiss</Button>
         {["pending", "under_review"].includes(rma.status) && (
           <>
             <Button
               variant="outlined"
               color="error"
               startIcon={<Cancel />}
-              onClick={() => onUpdateStatus(rma.id, "rejected", "Rejected by admin")}
+              onClick={() => onUpdateStatus(rma.id, "rejected", "Rejected by administrative review")}
+              sx={{ borderRadius: 2, fontWeight: 700 }}
             >
-              Reject
+              Deny
             </Button>
             <Button
               variant="contained"
               color="success"
               startIcon={<CheckCircle />}
-              onClick={() => onUpdateStatus(rma.id, "approved", "Approved by admin")}
+              onClick={() => onUpdateStatus(rma.id, "approved", "Approved by administrative review")}
+              disabled={rma.requiresWarrantyCheck && rma.isWarrantyValid === null}
+              sx={{ borderRadius: 2, fontWeight: 700, px: 4 }}
             >
               Approve
             </Button>
@@ -396,8 +372,10 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
         {rma.status === "approved" && (
           <Button
             variant="contained"
+            color="primary"
             startIcon={<Build />}
             onClick={() => onUpdateStatus(rma.id, "in_repair", "Sent for repair")}
+            sx={{ borderRadius: 2, fontWeight: 700, px: 4 }}
           >
             Start Repair
           </Button>
@@ -405,10 +383,23 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
         {rma.status === "in_repair" && (
           <Button
             variant="contained"
+            color="primary"
             startIcon={<LocalShipping />}
-            onClick={() => onUpdateStatus(rma.id, "shipped", "Repaired and shipped")}
+            onClick={() => onUpdateStatus(rma.id, "shipped", "Repaired and shipped to customer")}
+            sx={{ borderRadius: 2, fontWeight: 700, px: 4 }}
           >
             Mark as Shipped
+          </Button>
+        )}
+        {rma.status === "shipped" && (
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<CheckCircle />}
+            onClick={() => onUpdateStatus(rma.id, "completed", "RMA transaction successfully completed")}
+            sx={{ borderRadius: 2, fontWeight: 700, px: 4 }}
+          >
+            Complete Transaction
           </Button>
         )}
       </DialogActions>

@@ -15,20 +15,56 @@ import {
   Divider,
   Paper,
   CircularProgress,
+  InputAdornment,
+  Stack,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Save,
   Cancel,
-  Numbers,
-  Category,
-  BrandingWatermark,
+  Inventory2,
   AttachMoney,
-  Inventory,
-  CalendarMonth,
-  Description,
+  GppGood,
+  InfoOutlined,
+  Translate,
+  DescriptionOutlined,
+  CodeOutlined,
+  BookmarkBorder,
 } from "@mui/icons-material";
 
-const ProductForm = ({ product, mode, onSave, onCancel, loading }) => {
+const FormSection = ({ title, icon: Icon, children }) => (
+  <Paper
+    elevation={0}
+    sx={{
+      p: 4,
+      borderRadius: 4,
+      border: '1px solid',
+      borderColor: 'divider',
+      height: '100%',
+      bgcolor: alpha('#f8f9fa', 0.5)
+    }}
+  >
+    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
+      <Box
+        sx={{
+          p: 1,
+          borderRadius: 2,
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText',
+          display: 'flex'
+        }}
+      >
+        <Icon fontSize="small" />
+      </Box>
+      <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.1rem' }}>
+        {title}
+      </Typography>
+    </Stack>
+    {children}
+  </Paper>
+);
+
+const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, brands }) => {
   const [formData, setFormData] = useState({
     sku: "",
     name: "",
@@ -43,7 +79,6 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading }) => {
   });
   const [errors, setErrors] = useState({});
 
-  // Pre-fill form if editing
   useEffect(() => {
     if (product && mode === "edit") {
       setFormData({
@@ -55,99 +90,26 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading }) => {
         defaultWarrantyMonths: product.defaultWarrantyMonths || 12,
         stockQuantity: product.stockQuantity || 0,
         description: product.description || "",
-        specifications: product.specifications || "",
+        specifications: typeof product.specifications === 'string' ? product.specifications : JSON.stringify(product.specifications, null, 2) || "",
         isActive: product.isActive !== undefined ? product.isActive : true,
       });
-    } else {
-      // Reset for create mode
-      setFormData({
-        sku: "",
-        name: "",
-        category: "",
-        brand: "",
-        price: "",
-        defaultWarrantyMonths: 12,
-        stockQuantity: 0,
-        description: "",
-        specifications: "",
-        isActive: true,
-      });
     }
-    setErrors({});
   }, [product, mode]);
 
-  const categories = [
-    "Laptop",
-    "Desktop",
-    "Monitor",
-    "Accessory",
-    "Printer",
-    "Server",
-    "Networking",
-    "Storage",
-    "Other",
-  ];
-
-  const brands = [
-    "Dell",
-    "HP",
-    "Lenovo",
-    "Apple",
-    "Samsung",
-    "Logitech",
-    "Microsoft",
-    "ASUS",
-    "Acer",
-    "Other",
-  ];
-
-  const warrantyOptions = [6, 12, 24, 36, 48, 60];
+  const warrantyOptions = [6, 12, 18, 24, 36, 48, 60];
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear error for this field
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: "",
-      }));
-    }
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: "" }));
   };
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.sku.trim()) {
-      newErrors.sku = "SKU is required";
-    }
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Product name is required";
-    }
-
-    if (!formData.category) {
-      newErrors.category = "Category is required";
-    }
-
-    if (!formData.brand) {
-      newErrors.brand = "Brand is required";
-    }
-
-    if (!formData.price || isNaN(formData.price) || parseFloat(formData.price) <= 0) {
-      newErrors.price = "Valid price is required";
-    }
-
-    if (!formData.defaultWarrantyMonths || formData.defaultWarrantyMonths < 0) {
-      newErrors.defaultWarrantyMonths = "Valid warranty period is required";
-    }
-
-    if (formData.stockQuantity < 0) {
-      newErrors.stockQuantity = "Stock quantity cannot be negative";
-    }
+    if (!formData.sku.trim()) newErrors.sku = "SKU is required";
+    if (!formData.name.trim()) newErrors.name = "Product name is required";
+    if (!formData.category) newErrors.category = "Category is required";
+    if (!formData.brand) newErrors.brand = "Brand is required";
+    if (!formData.price || isNaN(formData.price) || parseFloat(formData.price) <= 0) newErrors.price = "Price must be > 0";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -155,286 +117,226 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
     if (validateForm()) {
-      const submitData = {
+      onSave({
         ...formData,
         price: parseFloat(formData.price),
         defaultWarrantyMonths: parseInt(formData.defaultWarrantyMonths),
         stockQuantity: parseInt(formData.stockQuantity),
-      };
-
-      onSave(submitData);
-    }
-  };
-
-  const handleSpecificationsChange = (e) => {
-    const value = e.target.value;
-    try {
-      // Try to parse as JSON for validation
-      if (value) {
-        JSON.parse(value);
-      }
-      handleChange("specifications", value);
-      setErrors(prev => ({ ...prev, specifications: "" }));
-    } catch (error) {
-      handleChange("specifications", value);
-      setErrors(prev => ({ ...prev, specifications: "Invalid JSON format" }));
+      });
     }
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit}>
-      <Grid container spacing={3}>
-        {/* Basic Information */}
+    <Box component="form" onSubmit={handleSubmit} sx={{ py: 2 }}>
+      <Grid container spacing={4}>
+        {/* Core Info */}
         <Grid size={12}>
-          <Paper sx={{ p: 2, bgcolor: "grey.50" }}>
-            <Typography variant="subtitle1" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-              <Numbers />
-              Basic Information
-            </Typography>
-
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 6 }}>
+          <FormSection title="Core Information" icon={InfoOutlined}>
+            <Grid container spacing={3}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
-                  label="SKU *"
+                  label="Product SKU"
                   value={formData.sku}
                   onChange={(e) => handleChange("sku", e.target.value)}
                   error={!!errors.sku}
-                  helperText={errors.sku || "Unique stock keeping unit"}
-                  required
+                  helperText={errors.sku}
                   disabled={mode === "edit"}
-                  size="small"
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, fontWeight: 700, fontFamily: 'monospace' } }}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><BookmarkBorder fontSize="small" /></InputAdornment> }}
                 />
               </Grid>
-
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12, md: 8 }}>
                 <TextField
                   fullWidth
-                  label="Product Name *"
+                  label="Product Listing Name"
                   value={formData.name}
                   onChange={(e) => handleChange("name", e.target.value)}
                   error={!!errors.name}
-                  helperText={errors.name || "Full product name"}
-                  required
-                  size="small"
+                  helperText={errors.name}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                 />
               </Grid>
             </Grid>
-          </Paper>
+          </FormSection>
         </Grid>
 
-        {/* Category and Brand */}
+        {/* Classification */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Paper sx={{ p: 2, height: "100%" }}>
-            <Typography variant="subtitle1" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-              <Category />
-              Category & Brand
-            </Typography>
+          <FormSection title="Classification" icon={Translate}>
+            <Stack spacing={3}>
+              <FormControl fullWidth error={!!errors.category}>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={formData.category}
+                  onChange={(e) => handleChange("category", e.target.value)}
+                  label="Category"
+                  sx={{ borderRadius: 3 }}
+                >
+                  {categories.map((cat) => (
+                    <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                  ))}
+                </Select>
+                {errors.category && <Typography variant="caption" color="error" sx={{ mx: 2, mt: 0.5 }}>{errors.category}</Typography>}
+              </FormControl>
 
-            <FormControl fullWidth size="small" sx={{ mb: 2 }} error={!!errors.category}>
-              <InputLabel>Category *</InputLabel>
-              <Select
-                value={formData.category}
-                onChange={(e) => handleChange("category", e.target.value)}
-                label="Category *"
-              >
-                <MenuItem value="">
-                  <em>Select Category</em>
-                </MenuItem>
-                {categories.map((cat) => (
-                  <MenuItem key={cat} value={cat}>
-                    {cat}
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.category && (
-                <Typography variant="caption" color="error">
-                  {errors.category}
-                </Typography>
-              )}
-            </FormControl>
-
-            <FormControl fullWidth size="small" error={!!errors.brand}>
-              <InputLabel>Brand *</InputLabel>
-              <Select
-                value={formData.brand}
-                onChange={(e) => handleChange("brand", e.target.value)}
-                label="Brand *"
-              >
-                <MenuItem value="">
-                  <em>Select Brand</em>
-                </MenuItem>
-                {brands.map((brand) => (
-                  <MenuItem key={brand} value={brand}>
-                    {brand}
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.brand && (
-                <Typography variant="caption" color="error">
-                  {errors.brand}
-                </Typography>
-              )}
-            </FormControl>
-          </Paper>
+              <FormControl fullWidth error={!!errors.brand}>
+                <InputLabel>Brand / Manufacturer</InputLabel>
+                <Select
+                  value={formData.brand}
+                  onChange={(e) => handleChange("brand", e.target.value)}
+                  label="Brand / Manufacturer"
+                  sx={{ borderRadius: 3 }}
+                >
+                  {brands.map((brand) => (
+                    <MenuItem key={brand} value={brand}>{brand}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+          </FormSection>
         </Grid>
 
-        {/* Pricing & Warranty */}
+        {/* Logistics */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Paper sx={{ p: 2, height: "100%" }}>
-            <Typography variant="subtitle1" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-              <AttachMoney />
-              Pricing & Warranty
-            </Typography>
-
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Price *"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => handleChange("price", e.target.value)}
-                  error={!!errors.price}
-                  helperText={errors.price}
-                  required
-                  size="small"
-                  InputProps={{
-                    startAdornment: "$",
-                  }}
-                />
+          <FormSection title="Logistics & Value" icon={AttachMoney}>
+            <Stack spacing={3}>
+              <TextField
+                fullWidth
+                label="Sales Price"
+                type="number"
+                value={formData.price}
+                onChange={(e) => handleChange("price", e.target.value)}
+                error={!!errors.price}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  sx: { borderRadius: 3, fontWeight: 800 }
+                }}
+              />
+              <Grid container spacing={2}>
+                <Grid size={6}>
+                  <TextField
+                    fullWidth
+                    label="Current Stock"
+                    type="number"
+                    value={formData.stockQuantity}
+                    onChange={(e) => handleChange("stockQuantity", e.target.value)}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start"><Inventory2 fontSize="small" /></InputAdornment>,
+                      sx: { borderRadius: 3 }
+                    }}
+                  />
+                </Grid>
+                <Grid size={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Warranty</InputLabel>
+                    <Select
+                      value={formData.defaultWarrantyMonths}
+                      onChange={(e) => handleChange("defaultWarrantyMonths", e.target.value)}
+                      label="Warranty"
+                      sx={{ borderRadius: 3 }}
+                    >
+                      {warrantyOptions.map((m) => <MenuItem key={m} value={m}>{m} Months</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
               </Grid>
-
-              <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth size="small" error={!!errors.defaultWarrantyMonths}>
-                  <InputLabel>Warranty Period *</InputLabel>
-                  <Select
-                    value={formData.defaultWarrantyMonths}
-                    onChange={(e) => handleChange("defaultWarrantyMonths", e.target.value)}
-                    label="Warranty Period *"
-                  >
-                    {warrantyOptions.map((months) => (
-                      <MenuItem key={months} value={months}>
-                        {months} months
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {errors.defaultWarrantyMonths && (
-                    <Typography variant="caption" color="error">
-                      {errors.defaultWarrantyMonths}
-                    </Typography>
-                  )}
-                </FormControl>
-              </Grid>
-            </Grid>
-          </Paper>
+            </Stack>
+          </FormSection>
         </Grid>
 
-        {/* Inventory */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper sx={{ p: 2, height: "100%" }}>
-            <Typography variant="subtitle1" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-              <Inventory />
-              Inventory
-            </Typography>
-
+        {/* Content */}
+        <Grid size={{ xs: 12, md: 7 }}>
+          <FormSection title="Product Description" icon={DescriptionOutlined}>
             <TextField
               fullWidth
-              label="Stock Quantity"
-              type="number"
-              value={formData.stockQuantity}
-              onChange={(e) => handleChange("stockQuantity", e.target.value)}
-              error={!!errors.stockQuantity}
-              helperText={errors.stockQuantity || "Current stock level"}
-              size="small"
-            />
-
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.isActive}
-                  onChange={(e) => handleChange("isActive", e.target.checked)}
-                  color="success"
-                />
-              }
-              label="Product Active"
-              sx={{ mt: 2 }}
-            />
-          </Paper>
-        </Grid>
-
-        {/* Description */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper sx={{ p: 2, height: "100%" }}>
-            <Typography variant="subtitle1" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-              <Description />
-              Description
-            </Typography>
-
-            <TextField
-              fullWidth
-              label="Product Description"
-              multiline
-              rows={4}
-              value={formData.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-              size="small"
-              helperText="Brief description of the product"
-            />
-          </Paper>
-        </Grid>
-
-        {/* Specifications (JSON) */}
-        <Grid size={12}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-              <Description />
-              Specifications (JSON Format)
-            </Typography>
-
-            <TextField
-              fullWidth
-              label="Product Specifications"
               multiline
               rows={6}
-              value={formData.specifications}
-              onChange={handleSpecificationsChange}
-              error={!!errors.specifications}
-              helperText={errors.specifications || "Enter specifications as JSON (e.g., {\"cpu\": \"Intel i7\", \"ram\": \"16GB\"})"}
-              size="small"
+              placeholder="Provide a detailed description of the product features..."
+              value={formData.description}
+              onChange={(e) => handleChange("description", e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, bgcolor: 'background.paper' } }}
             />
-
-            {formData.specifications && !errors.specifications && (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                Valid JSON format detected. Specifications will be stored as structured data.
-              </Alert>
-            )}
-          </Paper>
+          </FormSection>
         </Grid>
 
-        {/* Form Actions */}
+        {/* Visibility */}
+        <Grid size={{ xs: 12, md: 5 }}>
+          <FormSection title="Catalog Visibility" icon={GppGood}>
+            <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <FormControlLabel
+                control={<Switch checked={formData.isActive} onChange={(e) => handleChange("isActive", e.target.checked)} color="success" />}
+                label={
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      Active Status
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Toggle whether this product is visible in search and checkout.
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Box>
+            <Alert severity="info" sx={{ mt: 3, borderRadius: 3 }}>
+              Deactivating a product will hide it from customer views but preserve history.
+            </Alert>
+          </FormSection>
+        </Grid>
+
+        {/* Technical Specs */}
         <Grid size={12}>
-          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, pt: 2 }}>
+          <FormSection title="Technical Specifications" icon={CodeOutlined}>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              placeholder='{"model": "v2", "variant": "pro"}'
+              value={formData.specifications}
+              onChange={(e) => handleChange("specifications", e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  fontFamily: 'monospace',
+                  fontSize: '0.85rem',
+                  bgcolor: alpha('#263238', 0.02)
+                }
+              }}
+              helperText="Enter valid JSON for structured technical data."
+            />
+          </FormSection>
+        </Grid>
+
+        {/* Actions */}
+        <Grid size={12}>
+          <Divider sx={{ my: 2 }} />
+          <Stack direction="row" spacing={2} justifyContent="flex-end">
             <Button
-              variant="outlined"
-              startIcon={<Cancel />}
+              variant="text"
               onClick={onCancel}
               disabled={loading}
+              sx={{ p: 1.5, px: 4, borderRadius: 3, fontWeight: 700, textTransform: 'none' }}
+              startIcon={<Cancel />}
             >
-              Cancel
+              Discard Changes
             </Button>
-
             <Button
               type="submit"
               variant="contained"
-              startIcon={loading ? <CircularProgress size={20} /> : <Save />}
               disabled={loading}
+              sx={{
+                p: 1.5, px: 6,
+                borderRadius: 3,
+                fontWeight: 700,
+                textTransform: 'none',
+                boxShadow: '0 8px 24px -6px rgba(25, 118, 210, 0.4)'
+              }}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Save />}
             >
-              {loading ? "Saving..." : mode === "create" ? "Create Product" : "Update Product"}
+              {loading ? "Processing..." : mode === "create" ? "Launch Product" : "Save Updates"}
             </Button>
-          </Box>
+          </Stack>
         </Grid>
       </Grid>
     </Box>

@@ -2,9 +2,9 @@
 import React from "react";
 
 import { Container, Typography, Paper, Box, Button, Grid, Tabs, Tab } from "@mui/material";
-import { 
-  People, 
-  Settings, 
+import {
+  People,
+  Settings,
   Security,
   BarChart,
   Notifications,
@@ -54,7 +54,7 @@ const SuperAdminHome = () => {
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {systemStats.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
             <Paper sx={{ p: 3, display: "flex", alignItems: "center" }}>
               <Box sx={{ color: stat.color, mr: 2 }}>
                 {React.cloneElement(stat.icon, { sx: { fontSize: 40 } })}
@@ -117,7 +117,7 @@ const SuperAdminHome = () => {
 
       {/* Quick Actions */}
       <Grid container spacing={3} sx={{ mt: 3 }}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Recent System Activities
@@ -127,7 +127,7 @@ const SuperAdminHome = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               System Warnings

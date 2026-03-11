@@ -25,6 +25,7 @@ const RMAFilters = ({ filters, onFilterChange, onClearFilters }) => {
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
     { value: "in_repair", label: "In Repair" },
+    { value: "shipped", label: "Shipped" },
     { value: "completed", label: "Completed" },
   ];
 
@@ -64,22 +65,22 @@ const RMAFilters = ({ filters, onFilterChange, onClearFilters }) => {
   };
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: '1px solid #edf2f7', backgroundColor: '#fcfcfc' }}>
       <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-        <FilterList sx={{ mr: 1 }} />
-        <Typography variant="h6">Filters</Typography>
-        
+        <FilterList sx={{ mr: 1, color: "#1e293b" }} />
+        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1e293b" }}>Filters</Typography>
+
         {isFiltered() && (
           <Chip
-            label="Filtered"
+            label="Active"
             color="primary"
             size="small"
-            sx={{ ml: "auto" }}
+            sx={{ ml: "auto", fontWeight: 700, height: 20, fontSize: '0.65rem', borderRadius: 1 }}
           />
         )}
       </Box>
 
-      <Divider sx={{ mb: 3 }} />
+      <Divider sx={{ mb: 3, opacity: 0.6 }} />
 
       {/* Status Filter */}
       <FormControl fullWidth size="small" sx={{ mb: 2 }}>
@@ -167,40 +168,52 @@ const RMAFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
       <Button
         fullWidth
-        variant="outlined"
+        variant="text"
         startIcon={<ClearAll />}
         onClick={onClearFilters}
         disabled={!isFiltered()}
+        sx={{
+          textTransform: 'none',
+          fontWeight: 600,
+          color: "#64748b",
+          '&:hover': { color: "#ef4444", backgroundColor: "#fef2f2" }
+        }}
       >
         Clear All Filters
       </Button>
 
       {/* Active Filters Display */}
       {isFiltered() && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Active Filters:
+        <Box sx={{ mt: 3, p: 2, backgroundColor: "#f8fafc", borderRadius: 2 }}>
+          <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 700, textTransform: 'uppercase', mb: 1, display: 'block' }}>
+            Active Applied:
           </Typography>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
             {filters.status !== "all" && (
               <Chip
                 label={`Status: ${filters.status}`}
                 size="small"
+                variant="outlined"
                 onDelete={() => handleChange("status", "all")}
+                sx={{ borderRadius: 1, fontWeight: 500, backgroundColor: 'white' }}
               />
             )}
             {filters.rmaType !== "all" && (
               <Chip
                 label={`Type: ${filters.rmaType}`}
                 size="small"
+                variant="outlined"
                 onDelete={() => handleChange("rmaType", "all")}
+                sx={{ borderRadius: 1, fontWeight: 500, backgroundColor: 'white' }}
               />
             )}
             {filters.priority !== "all" && (
               <Chip
                 label={`Priority: ${filters.priority}`}
                 size="small"
+                variant="outlined"
                 onDelete={() => handleChange("priority", "all")}
+                sx={{ borderRadius: 1, fontWeight: 500, backgroundColor: 'white' }}
               />
             )}
           </Box>

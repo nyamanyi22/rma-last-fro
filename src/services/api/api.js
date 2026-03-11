@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -6,18 +7,74 @@ const api = axios.create({
         'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
+
 });
 
-// Add token to requests
+// SINGLE request interceptor with both features
 api.interceptors.request.use((config) => {
+    // Log the request
+    console.log('🚀 API Request:', {
+        url: config.url,
+        method: config.method,
+        baseURL: config.baseURL,
+        fullURL: `${config.baseURL}${config.url}`,
+        hasFiles: config.data instanceof FormData,
+        data: config.data instanceof FormData ? 'FormData (files)' : config.data
+    });
+
+    // Add token
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('🔑 Token added');
     }
+
+    // Log FormData contents if present (for debugging)
+    if (config.data instanceof FormData) {
+        console.log('📎 FormData contents:');
+        for (let pair of config.data.entries()) {
+            if (pair[0] === 'attachments[]') {
+                console.log(`  ${pair[0]}: ${pair[1].name} (${pair[1].type}, ${pair[1].size} bytes)`);
+            } else {
+                console.log(`  ${pair[0]}: ${pair[1]}`);
+            }
+        }
+    }
+
     return config;
 });
 
-// All API endpoints in one place
+// Response interceptor for error handling
+api.interceptors.response.use(
+    response => {
+        console.log('✅ API Response:', {
+            url: response.config.url,
+            status: response.status,
+            data: response.data
+        });
+        return response;
+    },
+    error => {
+        console.error('❌ API Error Details:', {
+            message: error.message,
+            code: error.code,
+            config: {
+                url: error.config?.url,
+                method: error.config?.method,
+                baseURL: error.config?.baseURL
+            },
+            response: error.response ? {
+                status: error.response.status,
+                data: error.response.data
+            } : 'No response (network error - server may be down)'
+        });
+        return Promise.reject(error);
+    }
+);
+
+
+
+// ==================== AUTH ENDPOINTS ====================
 export const authApi = {
     register: (data) => api.post('/register', data),
     login: (email, password) => api.post('/login', { email, password }),
@@ -26,31 +83,20 @@ export const authApi = {
     getMe: () => api.get('/me'),
 };
 
-// ==================== PROFILE MANAGEMENT ENDPOINTS ====================
+// ==================== PROFILE ENDPOINTS ====================
 export const profileApi = {
-    // 👈 GET current profile (already in authApi, but included here for completeness)
-    getProfile: () => api.get('/profile'),
-
-    // 👈 UPDATE profile - THIS IS WHAT YOU NEED FOR CUSTOMER PROFILE UPDATE
     updateProfile: (data) => api.put('/profile', data),
-
-    // 👈 CHANGE password
-    changePassword: (data) => api.put('/profile/password', data),
-
-    // 👈 UPLOAD profile picture (optional)
-    uploadAvatar: (formData) => api.post('/profile/avatar', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
-    }),
-
-    // 👈 DELETE account
-    deleteAccount: () => api.delete('/profile'),
+    getProfile: () => api.get('/customer/profile'), // Customer profile
+    deleteAccount: () => api.delete('/customer/profile'),
 };
-//products api
+
+// ==================== PRODUCT ENDPOINTS ====================
 export const productApi = {
-    getProducts: (params) => api.get('/admin/products', { params }),
-    getProduct: (id) => api.get(`/admin/products/${id}`),
+    // Public/authenticated routes
+    getProducts: (params) => api.get('/products', { params }),
+    getProduct: (id) => api.get(`/products/${id}`),
+
+    // Admin only routes
     createProduct: (data) => api.post('/admin/products', data),
     updateProduct: (id, data) => api.put(`/admin/products/${id}`, data),
     deleteProduct: (id) => api.delete(`/admin/products/${id}`),
@@ -59,24 +105,36 @@ export const productApi = {
     getCategories: () => api.get('/admin/products/categories'),
     getBrands: () => api.get('/admin/products/brands'),
 };
-//sales api
+
+// ==================== SALES ENDPOINTS ====================
 export const saleApi = {
+
+    getMySales: (params) => api.get('/customer/my-sales', { params }),
+
+    // Admin sales endpoints 
     getSales: (params) => api.get('/admin/sales', { params }),
     getSale: (id) => api.get(`/admin/sales/${id}`),
     createSale: (data) => api.post('/admin/sales', data),
     updateSale: (id, data) => api.put(`/admin/sales/${id}`, data),
     deleteSale: (id) => api.delete(`/admin/sales/${id}`),
     bulkDeleteSales: (ids) => api.post('/admin/sales/bulk-delete', { ids }),
-    importSales: (file, onUploadProgress) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        return api.post('/admin/sales/import', formData, { onUploadProgress });
+    importSales: (data, config) => {
+        if (data instanceof FormData) {
+            return api.post('/admin/sales/import', data, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: config?.onUploadProgress
+            });
+        }
+        return api.post('/admin/sales/import', data, {
+            headers: { 'Content-Type': 'application/json' },
+            onUploadProgress: config?.onUploadProgress
+        });
     },
     exportSales: () => api.get('/admin/sales/export', { responseType: 'blob' }),
     linkToUser: (data) => api.post('/admin/sales/link-to-user', data),
-    getMySales: (params) => api.get('/sales/my', { params }),
 };
-//customers api
+
+// ==================== CUSTOMER ENDPOINTS ====================
 export const customerApi = {
     getCustomers: (params) => api.get('/admin/customers', { params }),
     getCustomer: (id) => api.get(`/admin/customers/${id}`),
@@ -85,11 +143,227 @@ export const customerApi = {
     deleteCustomer: (id) => api.delete(`/admin/customers/${id}`),
     bulkDeleteCustomers: (ids) => api.post('/admin/customers/bulk-delete', { ids }),
     bulkUpdateStatus: (ids, isActive) => api.post('/admin/customers/bulk-status', { ids, is_active: isActive }),
-    importCustomers: (file, onUploadProgress) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        return api.post('/admin/customers/import', formData, { onUploadProgress });
-    },
-    exportCustomers: () => api.get('/admin/customers/export', { responseType: 'blob' }),
+    exportCustomers: (params) => api.get('/admin/customers/export', { params, responseType: 'blob' }),
 };
+
+// ==================== RMA ENDPOINTS ====================
+export const rmaApi = {
+    // =========================
+    // CUSTOMER RMA ENDPOINTS
+    // =========================
+
+    /**
+     * Get customer's RMA history
+     * GET /customer/my-rmas
+     */
+    getMyRmas: (params = {}) => api.get('/customer/my-rmas', { params }),
+
+    /**
+     * Submit a new RMA request with attachments
+     * POST /customer/rma/submit
+     */
+
+    submitRma: (data) => {
+        // If it's already FormData, send it directly
+        // ⚠️ Do NOT manually set Content-Type - let Axios set it automatically
+        // with the correct multipart boundary (e.g. boundary=----WebKitFormBoundaryXXX)
+        if (data instanceof FormData) {
+            return api.post('/customer/rma/submit', data, {
+                headers: { 'Content-Type': undefined }  // Let browser/Axios set boundary automatically
+            });
+        }
+
+        // Otherwise, create FormData
+        const formData = new FormData();
+
+        // Add all fields
+        Object.keys(data).forEach(key => {
+            if (key === 'attachments' && Array.isArray(data[key])) {
+                data[key].forEach(file => {
+                    if (file instanceof File) {
+                        formData.append('attachments[]', file);
+                    }
+                });
+            } else if (data[key] !== null && data[key] !== undefined) {
+                formData.append(key, data[key]);
+            }
+        });
+
+        return api.post('/customer/rma/submit', formData, {
+            headers: { 'Content-Type': undefined }  // Let browser/Axios set boundary automatically
+        });
+    },
+    /**
+     * Get single RMA details
+     * GET /customer/rma/{id}
+     */
+    getRma: (id) => api.get(`/customer/rma/${id}`),
+
+    /**
+     * Cancel a pending RMA
+     * POST /customer/rma/{id}/cancel
+     */
+    cancelRma: (id) => api.post(`/customer/rma/${id}/cancel`),
+
+    /**
+     * Download attachment (legacy method - by path)
+     * GET /customer/rma/attachment?path=...
+     */
+    downloadAttachmentByPath: (path) => api.get('/customer/rma/attachment', {
+        params: { path },
+        responseType: 'blob'
+    }),
+
+    // =========================
+    // CUSTOMER ATTACHMENT ENDPOINTS (NEW)
+    // =========================
+
+    /**
+     * Get attachment details with URLs
+     * GET /customer/rma/attachments/{id}
+     */
+    getAttachment: (id) => api.get(`/customer/rma/attachments/${id}`),
+
+    /**
+     * Download attachment (by ID) - opens in new tab
+     * GET /customer/rma/attachments/{id}/download
+     */
+    downloadAttachment: (id) => {
+        window.open(`/api/customer/rma/attachments/${id}/download`, '_blank');
+    },
+
+    /**
+     * Download attachment as blob (by ID)
+     * GET /customer/rma/attachments/{id}/download
+     */
+    downloadAttachmentAsBlob: (id) => api.get(`/customer/rma/attachments/${id}/download`, {
+        responseType: 'blob'
+    }),
+
+    // =========================
+    // ADMIN RMA ENDPOINTS
+    // =========================
+
+    /**
+     * Get all RMAs with filters
+     * GET /admin/rma
+     */
+    getRmas: (params = {}) => api.get('/admin/rma', { params }),
+
+    /**
+     * Get dashboard statistics
+     * GET /admin/rma/stats
+     */
+    getDashboardStats: () => api.get('/admin/rma/stats'),
+
+    /**
+     * Get comprehensive dashboard overview metrics
+     * GET /admin/reports/overview
+     */
+    getDashboardOverview: () => api.get('/admin/reports/overview'),
+
+    /**
+     * Export RMAs to CSV
+     * GET /admin/reports/export
+     */
+    exportRmas: (params) => api.get('/admin/reports/export', { params, responseType: 'blob' }),
+
+    /**
+     * Download attachment (admin legacy)
+     * GET /admin/rma/attachment?path=...
+     */
+    adminDownloadAttachmentByPath: (path) => api.get('/admin/rma/attachment', {
+        params: { path },
+        responseType: 'blob'
+    }),
+
+    /**
+     * Bulk delete RMAs
+     * POST /admin/rma/bulk-delete
+     */
+    bulkDeleteRmas: (ids) => api.post('/admin/rma/bulk-delete', { ids }),
+
+    /**
+     * Bulk update status
+     * POST /admin/rma/bulk-status
+     */
+    bulkUpdateStatus: (ids, status) => api.post('/admin/rma/bulk-status', { ids, status }),
+
+    // =========================
+    // ADMIN ATTACHMENT ENDPOINTS
+    // =========================
+
+    /**
+     * Get attachment details (admin)
+     * GET /admin/rma/attachments/{id}
+     */
+    getAdminAttachment: (id) => api.get(`/admin/rma/attachments/${id}`),
+
+    /**
+     * Delete attachment (admin only)
+     * DELETE /admin/rma/attachments/{id}
+     */
+    deleteAdminAttachment: (id) => api.delete(`/admin/rma/attachments/${id}`),
+
+    /**
+     * Download attachment (admin)
+     * GET /admin/rma/attachments/{id}/download
+     */
+    downloadAdminAttachment: (id) => {
+        window.open(`/api/admin/rma/attachments/${id}/download`, '_blank');
+    },
+
+    /**
+     * Get compression statistics
+     * GET /admin/rma/attachments/stats/{rmaId}
+     */
+    getCompressionStats: (rmaId) => api.get(`/admin/rma/attachments/stats/${rmaId}`),
+
+    // =========================
+    // ADMIN SINGLE RMA OPERATIONS
+    // =========================
+
+    /**
+     * Get single RMA (admin)
+     * GET /admin/rma/{id}
+     */
+    getRmaAdmin: (id) => api.get(`/admin/rma/${id}`),
+
+    /**
+     * Update RMA
+     * PUT /admin/rma/{id}
+     */
+    updateRma: (id, data) => api.put(`/admin/rma/${id}`, data),
+
+    /**
+     * Delete RMA
+     * DELETE /admin/rma/{id}
+     */
+    deleteRma: (id) => api.delete(`/admin/rma/${id}`),
+
+    /**
+     * Assign RMA to staff
+     * POST /admin/rma/{id}/assign
+     */
+    assignRma: (id, csrId) => api.post(`/admin/rma/${id}/assign`, { assigned_to: csrId }),
+
+    /**
+     * Get RMA comments
+     * GET /admin/rma/{id}/comments
+     */
+    getComments: (id) => api.get(`/admin/rma/${id}/comments`),
+
+    /**
+     * Add comment to RMA
+     * POST /admin/rma/{id}/comments
+     */
+    addComment: (id, data) => api.post(`/admin/rma/${id}/comments`, data),
+
+    /**
+     * Update shipping information
+     * PUT /admin/rma/{id}/shipping
+     */
+    updateShipping: (id, data) => api.put(`/admin/rma/${id}/shipping`, data),
+};
+
 export default api;

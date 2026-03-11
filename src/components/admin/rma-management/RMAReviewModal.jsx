@@ -39,7 +39,7 @@ const RMAReviewModal = ({ open, onClose, rma, onUpdateStatus }) => {
 
   if (!rma) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!decision) {
       alert("Please make a decision (Approve or Reject)");
       return;
@@ -55,17 +55,20 @@ const RMAReviewModal = ({ open, onClose, rma, onUpdateStatus }) => {
     // Prepare update data
     const updateData = {
       status: decision === "approve" ? "approved" : "rejected",
-      warrantyValid: rma.requiresWarrantyCheck ? warrantyValid : null,
-      notes: notes.trim(),
-      rejectionReason: decision === "reject" ? rejectionReason : null,
+      admin_notes: notes.trim(),
+      rejection_reason: decision === "reject" ? rejectionReason : null,
+      // If we want to support warranty validation in backend update:
+      // is_warranty_valid: rma.requiresWarrantyCheck ? warrantyValid : undefined
     };
 
-    // Simulate API call
-    setTimeout(() => {
-      onUpdateStatus(rma.id, updateData.status, updateData.notes);
-      setLoading(false);
+    try {
+      await onUpdateStatus(rma.id, updateData.status, updateData.admin_notes, updateData.rejection_reason);
       resetForm();
-    }, 1500);
+    } catch (error) {
+      console.error("Review update failed:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -124,21 +127,22 @@ const RMAReviewModal = ({ open, onClose, rma, onUpdateStatus }) => {
         {/* Quick Summary */}
         <Paper sx={{ p: 2, mb: 3, bgcolor: "grey.50" }}>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Typography variant="body2"><strong>Customer:</strong> {rma.customerName}</Typography>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Typography variant="body2"><strong>Product:</strong> {rma.productName}</Typography>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <Typography variant="body2"><strong>Type:</strong> 
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Typography variant="body2"><strong>Type:</strong></Typography>
                 <Chip
                   label={rma.rmaType === "return" ? "Return" : "Warranty"}
                   size="small"
                   sx={{ ml: 1 }}
                   color={rma.rmaType === "return" ? "primary" : "secondary"}
                 />
-              </Typography>
+              </Box>
             </Grid>
           </Grid>
         </Paper>
@@ -152,7 +156,7 @@ const RMAReviewModal = ({ open, onClose, rma, onUpdateStatus }) => {
             <Alert severity="info" sx={{ mb: 2 }}>
               This is a warranty claim. Please validate the warranty status.
             </Alert>
-            
+
             <RadioGroup
               row
               value={warrantyValid === null ? "" : warrantyValid.toString()}
@@ -230,8 +234,10 @@ const RMAReviewModal = ({ open, onClose, rma, onUpdateStatus }) => {
               Rejection Reason
             </Typography>
             <FormControl fullWidth>
-              <InputLabel>Select Reason</InputLabel>
+              <InputLabel id="rejection-reason-label">Select Reason</InputLabel>
               <Select
+                labelId="rejection-reason-label"
+                id="rejection-reason-select"
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 label="Select Reason"
@@ -291,7 +297,7 @@ const RMAReviewModal = ({ open, onClose, rma, onUpdateStatus }) => {
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={loading || !decision}
+          disabled={loading || !decision || (decision === "approve" && rma.requiresWarrantyCheck && warrantyValid === null)}
           startIcon={decision === "approve" ? <CheckCircle /> : <Cancel />}
           color={decision === "approve" ? "success" : "error"}
         >

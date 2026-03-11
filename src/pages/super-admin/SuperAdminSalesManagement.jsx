@@ -14,27 +14,28 @@ import {
     Dialog,
     DialogTitle,
     DialogContent,
-    Paper,
     Stack,
     Fade,
+    Paper,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
     Search,
-    PersonAdd,
+    Add,
+    Delete,
     Refresh,
-    FileDownloadOutlined,
+    Download,
+    Upload,
+    ReceiptOutlined,
     PeopleAltOutlined,
-    HowToRegOutlined,
-    PersonAddOutlined,
-    DeleteOutline,
-    CheckCircleOutline,
-    BlockOutlined,
+    Inventory2Outlined,
+    TrendingUpOutlined,
+    FilterList,
 } from "@mui/icons-material";
-import CustomerTable from "../../components/admin/customer-management/CustomerTable";
-import CustomerForm from "../../components/admin/customer-management/CustomerForm";
-import CustomerDetails from "../../components/admin/customer-management/CustomerDetails";
-import CustomerService from "../../services/api/customerService";
+import SalesTable from "../../components/admin/sales-management/SalesTable";
+import SaleForm from "../../components/admin/sales-management/SaleForm";
+import ImportSales from "../../components/admin/sales-management/ImportSales";
+import SaleService from "../../services/api/saleService";
 
 const GlassCard = ({ title, value, icon: Icon, color }) => (
     <Box
@@ -64,11 +65,12 @@ const GlassCard = ({ title, value, icon: Icon, color }) => (
     </Box>
 );
 
-const CustomerManagement = () => {
-    const [customers, setCustomers] = useState([]);
+const SuperAdminSalesManagement = () => {
+    const [sales, setSales] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [importDialogOpen, setImportDialogOpen] = useState(false);
+    const [selectedSale, setSelectedSale] = useState(null);
     const [dialogMode, setDialogMode] = useState("create");
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
@@ -77,13 +79,14 @@ const CustomerManagement = () => {
     const [formErrors, setFormErrors] = useState({});
     const [stats, setStats] = useState({
         total: 0,
-        active: 0,
-        newThisMonth: 0,
+        thisMonth: 0,
+        totalCustomers: 0,
+        totalProducts: 0,
     });
 
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [exporting, setExporting] = useState(false);
+    const [rowsPerPage] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
 
     const showSuccess = (msg) => {
         setSuccessMessage(msg);
@@ -95,7 +98,7 @@ const CustomerManagement = () => {
         setTimeout(() => setErrorMessage(""), 5000);
     };
 
-    const loadCustomers = async () => {
+    const loadSales = async () => {
         setLoading(true);
         try {
             const params = {
@@ -104,139 +107,107 @@ const CustomerManagement = () => {
                 search: searchQuery || undefined,
             };
 
-            const response = await CustomerService.getCustomers(params);
+            const response = await SaleService.getSales(params);
 
             if (response.success) {
-                const fetchedCustomers = response.data?.data || [];
-                setCustomers(fetchedCustomers);
+                const fetchedSales = response.data?.data || [];
+                setSales(fetchedSales);
                 setTotalCount(response.data?.total || 0);
 
                 const now = new Date();
-                const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-                const active = fetchedCustomers.filter(c => c.is_active).length;
-                const newThisMonth = fetchedCustomers.filter(c =>
-                    new Date(c.created_at) >= firstDayOfMonth
-                ).length;
+                const thisMonth = fetchedSales.filter((s) => {
+                    const d = new Date(s.saleDate || s.sale_date);
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                }).length;
+                const uniqueCustomers = new Set(fetchedSales.map((s) => s.customerEmail || s.customer_email)).size;
+                const uniqueProducts = new Set(fetchedSales.map((s) => s.productId || s.product_id)).size;
 
                 setStats({
-                    total: response.data?.total || fetchedCustomers.length,
-                    active,
-                    newThisMonth,
+                    total: response.data?.total || fetchedSales.length,
+                    thisMonth,
+                    totalCustomers: uniqueCustomers,
+                    totalProducts: uniqueProducts,
                 });
             } else {
-                showError(response.message || "Failed to load customers");
+                showError(response.message || "Failed to load sales");
             }
         } catch (err) {
-            showError(err.message || "Failed to load customers");
+            showError(err.message || "Failed to load sales");
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadCustomers();
+        loadSales();
     }, [page]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
             setPage(0);
-            loadCustomers();
+            loadSales();
         }, 500);
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const handleCreateCustomer = () => {
-        setSelectedCustomer(null);
+    const handleCreateSale = () => {
+        setSelectedSale(null);
         setFormErrors({});
         setDialogMode("create");
         setDialogOpen(true);
     };
 
-    const handleEditCustomer = (customer) => {
-        setSelectedCustomer(customer);
+    const handleEditSale = (sale) => {
+        setSelectedSale(sale);
         setFormErrors({});
         setDialogMode("edit");
         setDialogOpen(true);
     };
 
-    const handleDeleteCustomer = async (customerId) => {
-        if (!window.confirm("Are you sure you want to delete this customer?")) return;
+    const handleDeleteSale = async (saleId) => {
+        if (!window.confirm("Are you sure you want to delete this sale record?")) return;
         setLoading(true);
         try {
-            await CustomerService.deleteCustomer(customerId);
-            showSuccess("Customer deleted successfully");
-            loadCustomers();
+            await SaleService.deleteSale(saleId);
+            showSuccess("Sale deleted successfully");
+            loadSales();
         } catch (err) {
-            showError(err.message || "Failed to delete customer");
+            showError(err.message || "Failed to delete sale");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleToggleStatus = async (customerId) => {
-        const customer = customers.find(c => c.id === customerId);
-        if (!customer) return;
-
-        setLoading(true);
-        try {
-            await CustomerService.updateCustomer(customerId, {
-                ...customer,
-                isActive: !customer.is_active,
-            });
-            showSuccess(`Customer ${!customer.is_active ? 'activated' : 'deactivated'} successfully`);
-            loadCustomers();
-        } catch (err) {
-            showError(err.message || "Failed to update status");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSaveCustomer = async (customerData) => {
+    const handleSaveSale = async (saleData) => {
         setFormErrors({});
         try {
-            if (selectedCustomer) {
-                await CustomerService.updateCustomer(selectedCustomer.id, customerData);
-                showSuccess('Customer updated successfully');
+            if (selectedSale) {
+                await SaleService.updateSale(selectedSale.id, saleData);
+                showSuccess('Sale updated successfully');
             } else {
-                await CustomerService.createCustomer(customerData);
-                showSuccess('Customer created successfully');
+                await SaleService.createSale(saleData);
+                showSuccess('Sale created successfully');
             }
             setDialogOpen(false);
-            loadCustomers();
+            loadSales();
         } catch (error) {
             if (error.errors) {
                 setFormErrors(error.errors);
             }
-            showError(error.message || 'Failed to save customer');
+            showError(error.message || 'Failed to save sale');
         }
     };
 
     const handleBulkDelete = async () => {
-        if (!window.confirm(`Delete ${selectedIds.length} selected customers?`)) return;
+        if (!window.confirm(`Delete ${selectedIds.length} selected sale(s)?`)) return;
         setLoading(true);
         try {
-            await CustomerService.bulkDeleteCustomers(selectedIds);
-            showSuccess("Customers deleted successfully");
+            await SaleService.bulkDeleteSales(selectedIds);
+            showSuccess("Sales deleted successfully");
             setSelectedIds([]);
-            loadCustomers();
+            loadSales();
         } catch (err) {
-            showError(err.message || "Failed to delete customers");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleBulkStatusUpdate = async (status) => {
-        setLoading(true);
-        try {
-            await CustomerService.bulkUpdateStatus(selectedIds, status);
-            showSuccess(`Customers ${status ? 'activated' : 'deactivated'} successfully`);
-            setSelectedIds([]);
-            loadCustomers();
-        } catch (err) {
-            showError(err.message || `Failed to ${status ? 'activate' : 'deactivate'} customers`);
+            showError(err.message || "Failed to delete sales");
         } finally {
             setLoading(false);
         }
@@ -244,7 +215,7 @@ const CustomerManagement = () => {
 
     const handleSelectAll = (event) => {
         if (event.target.checked) {
-            setSelectedIds(customers.map((c) => c.id));
+            setSelectedIds(sales.map((s) => s.id));
         } else {
             setSelectedIds([]);
         }
@@ -256,23 +227,29 @@ const CustomerManagement = () => {
         );
     };
 
-    const handleExport = async () => {
-        setExporting(true);
-        try {
-            const params = {};
-            if (selectedIds.length > 0) {
-                params.ids = selectedIds;
-            } else if (searchQuery) {
-                params.search = searchQuery;
-            }
+    const handleExport = () => {
+        const rows = [
+            ["Invoice #", "Customer", "Email", "Product", "SKU", "Qty", "Sale Date"],
+            ...sales.map((s) => [
+                s.orderNumber || s.order_number,
+                s.invoiceNumber || s.invoice_number || "",
+                s.customerName || s.customer_name,
+                s.customerEmail || s.customer_email,
+                s.product?.name || "",
+                s.product?.sku || "",
+                s.quantity,
+                s.saleDate || s.sale_date,
+            ]),
+        ]
+            .map((r) => r.join(","))
+            .join("\n");
 
-            await CustomerService.exportCustomers(params);
-            showSuccess("Member ledger export finalized");
-        } catch (err) {
-            showError(err.message || "Export synchronization failure");
-        } finally {
-            setExporting(false);
-        }
+        const blob = new Blob([rows], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `sales_export_${new Date().toISOString().split("T")[0]}.csv`;
+        a.click();
     };
 
     return (
@@ -282,44 +259,57 @@ const CustomerManagement = () => {
                 <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2}>
                     <Box>
                         <Typography variant="h3" sx={{ fontWeight: 900, color: 'text.primary', letterSpacing: -1 }}>
-                            Customer Base
+                            Sales Record
                         </Typography>
                         <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
-                            Manage your customer relationships and account access.
+                            Track transactional data and customer purchase history.
                         </Typography>
                     </Box>
-                    <Button
-                        variant="contained"
-                        size="large"
-                        startIcon={<PersonAdd />}
-                        onClick={handleCreateCustomer}
-                        sx={{
-                            borderRadius: 3,
-                            px: 4,
-                            py: 1.5,
-                            fontWeight: 700,
-                            textTransform: 'none',
-                            boxShadow: '0 8px 16px -4px rgba(25, 118, 210, 0.3)'
-                        }}
-                    >
-                        Add New Customer
-                    </Button>
+                    <Stack direction="row" spacing={2}>
+                        <Button
+                            variant="outlined"
+                            size="large"
+                            startIcon={<Upload />}
+                            onClick={() => setImportDialogOpen(true)}
+                            sx={{ borderRadius: 3, fontWeight: 700, textTransform: 'none', px: 3 }}
+                        >
+                            Batch Import
+                        </Button>
+                        <Button
+                            variant="contained"
+                            size="large"
+                            startIcon={<Add />}
+                            onClick={handleCreateSale}
+                            sx={{
+                                borderRadius: 3,
+                                px: 4,
+                                fontWeight: 700,
+                                textTransform: 'none',
+                                boxShadow: '0 8px 16px -4px rgba(25, 118, 210, 0.3)'
+                            }}
+                        >
+                            Log New Sale
+                        </Button>
+                    </Stack>
                 </Stack>
 
                 {/* Stats Grid */}
                 <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                        <GlassCard title="Total Customers" value={stats.total} icon={PeopleAltOutlined} color="#1976d2" />
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <GlassCard title="Total Sales" value={stats.total} icon={ReceiptOutlined} color="#1976d2" />
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                        <GlassCard title="Active Accounts" value={stats.active} icon={HowToRegOutlined} color="#2e7d32" />
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <GlassCard title="Sales this month" value={stats.thisMonth} icon={TrendingUpOutlined} color="#2e7d32" />
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 12, md: 4 }}>
-                        <GlassCard title="Fresh Signups" value={stats.newThisMonth} icon={PersonAddOutlined} color="#ed6c02" />
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <GlassCard title="Active Customers" value={stats.totalCustomers} icon={PeopleAltOutlined} color="#ed6c02" />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <GlassCard title="Products Sold" value={stats.totalProducts} icon={Inventory2Outlined} color="#9c27b0" />
                     </Grid>
                 </Grid>
 
-                {/* Action Bar */}
+                {/* Search & Actions Bar */}
                 <Stack
                     direction={{ xs: 'column', md: 'row' }}
                     spacing={2}
@@ -333,7 +323,7 @@ const CustomerManagement = () => {
                     }}
                 >
                     <TextField
-                        placeholder="Search by name, email or phone..."
+                        placeholder="Search by invoice #, customer or product..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         fullWidth
@@ -355,23 +345,16 @@ const CustomerManagement = () => {
                         }}
                     />
                     <Stack direction="row" spacing={1}>
-                        <Tooltip title="Refresh Catalog">
-                            <IconButton onClick={loadCustomers} disabled={loading} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                                <Refresh />
-                            </IconButton>
+                        <Tooltip title="Synchronize Data">
+                            <span>
+                                <IconButton onClick={loadSales} disabled={loading} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+                                    <Refresh />
+                                </IconButton>
+                            </span>
                         </Tooltip>
-                        <Tooltip title={exporting ? "Exporting..." : "Export Customer List"}>
-                            <IconButton
-                                onClick={handleExport}
-                                disabled={exporting}
-                                sx={{
-                                    borderRadius: 3,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    position: 'relative'
-                                }}
-                            >
-                                {exporting ? <CircularProgress size={20} color="inherit" /> : <FileDownloadOutlined />}
+                        <Tooltip title="Download CSV Archive">
+                            <IconButton onClick={handleExport} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+                                <Download />
                             </IconButton>
                         </Tooltip>
                     </Stack>
@@ -380,18 +363,18 @@ const CustomerManagement = () => {
                 {/* Feedback Messages */}
                 <Box>
                     <Fade in={!!successMessage}>
-                        <Alert severity="success" sx={{ borderRadius: 3, mb: 2, display: successMessage ? 'flex' : 'none' }} onClose={() => setSuccessMessage("")}>
+                        <Alert severity="success" sx={{ borderRadius: 3, mb: 2, display: successMessage ? 'flex' : 'none' }}>
                             {successMessage}
                         </Alert>
                     </Fade>
                     <Fade in={!!errorMessage}>
-                        <Alert severity="error" sx={{ borderRadius: 3, mb: 2, display: errorMessage ? 'flex' : 'none' }} onClose={() => setErrorMessage("")}>
+                        <Alert severity="error" sx={{ borderRadius: 3, mb: 2, display: errorMessage ? 'flex' : 'none' }}>
                             {errorMessage}
                         </Alert>
                     </Fade>
                 </Box>
 
-                {/* Bulk Selection Bar */}
+                {/* Bulk Actions */}
                 {selectedIds.length > 0 && (
                     <Fade in={selectedIds.length > 0}>
                         <Stack
@@ -402,51 +385,60 @@ const CustomerManagement = () => {
                                 p: 2,
                                 px: 3,
                                 borderRadius: 4,
-                                bgcolor: alpha('#1976d2', 0.05),
+                                bgcolor: alpha('#d32f2f', 0.05),
                                 border: '1px solid',
-                                borderColor: alpha('#1976d2', 0.2),
+                                borderColor: alpha('#d32f2f', 0.2),
                             }}
                         >
-                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                                {selectedIds.length} Customers Selected
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'error.main' }}>
+                                {selectedIds.length} Sale Records Selected
                             </Typography>
-                            <Stack direction="row" spacing={2}>
-                                <Button variant="text" color="success" startIcon={<CheckCircleOutline />} onClick={() => handleBulkStatusUpdate(true)}>
-                                    Activate
-                                </Button>
-                                <Button variant="text" color="warning" startIcon={<BlockOutlined />} onClick={() => handleBulkStatusUpdate(false)}>
-                                    Deactivate
-                                </Button>
-                                <Button variant="contained" color="error" startIcon={<DeleteOutline />} onClick={handleBulkDelete} sx={{ borderRadius: 2 }}>
-                                    Remove
-                                </Button>
-                            </Stack>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                startIcon={<Delete />}
+                                onClick={handleBulkDelete}
+                                sx={{ borderRadius: 2.5, px: 3, fontWeight: 700 }}
+                            >
+                                Delete Selected
+                            </Button>
                         </Stack>
                     </Fade>
                 )}
 
-                {/* Main Content Area */}
+                {/* Table Area */}
                 <Box sx={{ position: 'relative' }}>
                     {loading && (
-                        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: alpha('#fff', 0.6), borderRadius: 4 }}>
+                        <Box sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: alpha('#fff', 0.6),
+                            borderRadius: 4
+                        }}>
                             <CircularProgress size={40} />
                         </Box>
                     )}
-                    <CustomerTable
-                        customers={customers}
-                        onEdit={handleEditCustomer}
-                        onDelete={handleDeleteCustomer}
-                        onToggleStatus={handleToggleStatus}
+                    <SalesTable
+                        sales={sales}
+                        onEdit={handleEditSale}
+                        onDelete={handleDeleteSale}
                         selectedIds={selectedIds}
                         onSelectAll={handleSelectAll}
                         onSelectRow={handleSelectRow}
                     />
                 </Box>
 
-                {/* Footer Navigation */}
+                {/* Pagination Area */}
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        Showing {customers.length} of {totalCount} records
+                        Displaying {sales.length} of {totalCount} transactions
                     </Typography>
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <Button size="small" disabled={page === 0} onClick={() => setPage(page - 1)} sx={{ borderRadius: 2 }}>
@@ -475,17 +467,41 @@ const CustomerManagement = () => {
             >
                 <DialogTitle sx={{ p: 4, pb: 2 }}>
                     <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                        {dialogMode === "create" ? "Add New Customer Account" : "Modify Member Profile"}
+                        {dialogMode === "create" ? "Record Transaction" : "Modify Sale Data"}
                     </Typography>
                 </DialogTitle>
                 <DialogContent sx={{ p: 4, pt: 0 }}>
-                    <CustomerForm
-                        customer={selectedCustomer}
+                    <SaleForm
+                        sale={selectedSale}
                         mode={dialogMode}
-                        onSave={handleSaveCustomer}
+                        onSave={handleSaveSale}
                         onCancel={() => setDialogOpen(false)}
                         loading={loading}
                         errors={formErrors}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            {/* Import Context */}
+            <Dialog
+                open={importDialogOpen}
+                onClose={() => setImportDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                TransitionComponent={Fade}
+                PaperProps={{ sx: { borderRadius: 4, backgroundImage: 'none' } }}
+            >
+                <DialogTitle sx={{ p: 4, pb: 2 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 800 }}>Import CSV Archive</Typography>
+                </DialogTitle>
+                <DialogContent sx={{ p: 4, pt: 0 }}>
+                    <ImportSales
+                        onImportComplete={() => {
+                            setImportDialogOpen(false);
+                            loadSales();
+                            showSuccess("Sales data synchronized successfully");
+                        }}
+                        onCancel={() => setImportDialogOpen(false)}
                     />
                 </DialogContent>
             </Dialog>
@@ -493,4 +509,4 @@ const CustomerManagement = () => {
     );
 };
 
-export default CustomerManagement;
+export default SuperAdminSalesManagement;

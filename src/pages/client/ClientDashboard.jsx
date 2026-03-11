@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Grid,
     Paper,
@@ -7,7 +7,9 @@ import {
     Card,
     CardContent,
     Button,
-    Chip
+    Chip,
+    CircularProgress,
+    Alert
 } from '@mui/material';
 import {
     Assignment,
@@ -17,57 +19,129 @@ import {
     ArrowForward
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import rmaService from '../../services/api/rmaService';
 
 const ClientDashboard = () => {
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [stats, setStats] = useState({
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        total: 0
+    });
+    const [recentRmas, setRecentRmas] = useState([]);
 
-    // Mock data
-    const stats = [
+    // Fetch dashboard data
+    useEffect(() => {
+        loadDashboardData();
+    }, []);
+
+    const loadDashboardData = async () => {
+        setLoading(true);
+        try {
+            // Run both requests in parallel:
+            // - allResponse: fetch all RMAs (up to 100) for accurate stat counts
+            // - recentResponse: fetch only 3 most recent for the "Recent Requests" list
+            const [allResponse, recentResponse] = await Promise.all([
+                rmaService.getMyRmas({ per_page: 100 }),
+                rmaService.getMyRmas({ per_page: 3 }),
+            ]);
+
+            if (recentResponse.success) {
+                setRecentRmas(recentResponse.data.data || []);
+            }
+
+            if (allResponse.success) {
+                const allRmas = allResponse.data.data || [];
+                const total = allResponse.data.total || allRmas.length;
+
+                // Calculate accurate stats from the full list
+                const pending = allRmas.filter(r => r.status === 'pending' || r.status === 'under_review').length;
+                const approved = allRmas.filter(r => ['approved', 'completed', 'repaired', 'delivered', 'shipped', 'ready_for_shipment'].includes(r.status)).length;
+                const rejected = allRmas.filter(r => r.status === 'rejected' || r.status === 'cancelled').length;
+
+                setStats({ pending, approved, rejected, total });
+            } else if (!recentResponse.success) {
+                setError('Failed to load dashboard data');
+            }
+        } catch (err) {
+            console.error('Error loading dashboard:', err);
+            setError(err.message || 'Failed to load dashboard data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getStatusColor = (status) => {
+        const statusMap = {
+            'pending': 'warning',
+            'under_review': 'info',
+            'approved': 'success',
+            'rejected': 'error',
+            'in_repair': 'info',
+            'repaired': 'success',
+            'shipped': 'primary',
+            'delivered': 'success',
+            'completed': 'success',
+            'cancelled': 'default'
+        };
+        return statusMap[status] || 'default';
+    };
+
+    const getStatusLabel = (status) => {
+        const statusMap = {
+            'pending': 'Pending',
+            'under_review': 'Under Review',
+            'approved': 'Approved',
+            'rejected': 'Rejected',
+            'in_repair': 'In Repair',
+            'repaired': 'Repaired',
+            'shipped': 'Shipped',
+            'delivered': 'Delivered',
+            'completed': 'Completed',
+            'cancelled': 'Cancelled'
+        };
+        return statusMap[status] || status;
+    };
+
+    const formatDate = (dateString) => {
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString(undefined, options);
+    };
+
+    // Stats cards configuration
+    const statCards = [
         {
             title: 'Pending Reviews',
-            value: '2',
+            value: stats.pending,
             icon: <AccessTime sx={{ fontSize: 30 }} />,
             color: 'warning.main',
             bgcolor: 'warning.light'
         },
         {
             title: 'Approved',
-            value: '5',
+            value: stats.approved,
             icon: <CheckCircle sx={{ fontSize: 30 }} />,
             color: 'success.main',
             bgcolor: 'success.light'
         },
         {
             title: 'Rejected',
-            value: '1',
+            value: stats.rejected,
             icon: <Error sx={{ fontSize: 30 }} />,
             color: 'error.main',
             bgcolor: 'error.light'
         },
         {
             title: 'Total Requests',
-            value: '8',
+            value: stats.total,
             icon: <Assignment sx={{ fontSize: 30 }} />,
             color: 'info.main',
             bgcolor: 'info.light'
         },
     ];
-
-    const recentActivity = [
-        { id: 'RMA-2024-001', product: 'Dell XPS 13', status: 'Pending', date: '2024-02-10' },
-        { id: 'RMA-2024-002', product: 'Logitech Mouse', status: 'Approved', date: '2024-02-08' },
-        { id: 'RMA-2024-003', product: 'Samsung Monitor', status: 'In Repair', date: '2024-02-01' },
-    ];
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Approved': return 'success';
-            case 'Pending': return 'warning';
-            case 'In Repair': return 'info';
-            case 'Rejected': return 'error';
-            default: return 'default';
-        }
-    };
 
     return (
         <Box>
@@ -80,66 +154,106 @@ const ClientDashboard = () => {
                 </Typography>
             </Box>
 
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                {stats.map((stat, index) => (
-                    <Grid item xs={12} sm={6} md={3} key={index}>
-                        <Card sx={{ borderRadius: 4, height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-                            <CardContent>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                    <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: stat.bgcolor, color: stat.color }}>
-                                        {stat.icon}
+            {/* Loading State */}
+            {loading && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                    <CircularProgress />
+                </Box>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+                    {error}
+                </Alert>
+            )}
+
+            {/* Stats Cards */}
+            {!loading && !error && (
+                <Grid container spacing={3} sx={{ mb: 4 }}>
+                    {statCards.map((stat, index) => (
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+                            <Card sx={{ borderRadius: 4, height: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+                                <CardContent>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                        <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: stat.bgcolor, color: stat.color }}>
+                                            {stat.icon}
+                                        </Box>
                                     </Box>
-                                </Box>
-                                <Typography variant="h4" fontWeight="bold">{stat.value}</Typography>
-                                <Typography variant="body2" color="text.secondary">{stat.title}</Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
-            </Grid>
+                                    <Typography variant="h4" fontWeight="bold">{stat.value}</Typography>
+                                    <Typography variant="body2" color="text.secondary">{stat.title}</Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    ))}
+                </Grid>
+            )}
 
             <Grid container spacing={3}>
-                <Grid item xs={12} md={8}>
+                {/* Recent Requests */}
+                <Grid size={{ xs: 12, md: 8 }}>
                     <Paper sx={{ p: 3, borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                             <Typography variant="h6" fontWeight={600}>Recent Requests</Typography>
-                            <Button endIcon={<ArrowForward />} onClick={() => navigate('/client/rma/history')}>
+                            <Button
+                                endIcon={<ArrowForward />}
+                                onClick={() => navigate('/client/rma/history')}
+                                disabled={recentRmas.length === 0}
+                            >
                                 View All
                             </Button>
                         </Box>
 
-                        <Box>
-                            {recentActivity.map((rma, index) => (
-                                <Box
-                                    key={rma.id}
-                                    sx={{
-                                        p: 2,
-                                        mb: 2,
-                                        borderRadius: 3,
-                                        bgcolor: 'grey.50',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        '&:last-child': { mb: 0 }
-                                    }}
-                                >
-                                    <Box>
-                                        <Typography variant="subtitle1" fontWeight={600}>{rma.product}</Typography>
-                                        <Typography variant="caption" color="text.secondary">ID: {rma.id} • {rma.date}</Typography>
+                        {recentRmas.length === 0 ? (
+                            <Box sx={{ textAlign: 'center', py: 4 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    No recent RMA requests found.
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Box>
+                                {recentRmas.map((rma) => (
+                                    <Box
+                                        key={rma.id}
+                                        sx={{
+                                            p: 2,
+                                            mb: 2,
+                                            borderRadius: 3,
+                                            bgcolor: 'grey.50',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                bgcolor: 'grey.100'
+                                            },
+                                            '&:last-child': { mb: 0 }
+                                        }}
+                                        onClick={() => navigate(`/client/rma/${rma.id}`)}
+                                    >
+                                        <Box>
+                                            <Typography variant="subtitle1" fontWeight={600}>
+                                                {rma.productName || rma.product?.name || 'Unknown Product'}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                ID: {rma.rmaNumber} • {formatDate(rma.createdAt || rma.submittedDate)}
+                                            </Typography>
+                                        </Box>
+                                        <Chip
+                                            label={getStatusLabel(rma.status)}
+                                            color={getStatusColor(rma.status)}
+                                            size="small"
+                                            sx={{ fontWeight: 600, borderRadius: 2 }}
+                                        />
                                     </Box>
-                                    <Chip
-                                        label={rma.status}
-                                        color={getStatusColor(rma.status)}
-                                        size="small"
-                                        sx={{ fontWeight: 600, borderRadius: 2 }}
-                                    />
-                                </Box>
-                            ))}
-                        </Box>
+                                ))}
+                            </Box>
+                        )}
                     </Paper>
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                {/* Start New Request Card */}
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Paper
                         sx={{
                             p: 3,
@@ -166,7 +280,13 @@ const ClientDashboard = () => {
                             color="secondary"
                             size="large"
                             onClick={() => navigate('/client/rma/new')}
-                            sx={{ borderRadius: 3, px: 4, bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}
+                            sx={{
+                                borderRadius: 3,
+                                px: 4,
+                                bgcolor: 'white',
+                                color: 'primary.main',
+                                '&:hover': { bgcolor: 'grey.100' }
+                            }}
                         >
                             Start Request
                         </Button>

@@ -1,10 +1,8 @@
-﻿// src/pages/client/NewRMA.jsx
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
-  Container,
+  Box,
   Paper,
   Typography,
-  Box,
   Stepper,
   Step,
   StepLabel,
@@ -16,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import RMAFormStep1 from "../../components/client/rma/RMAFormStep1";
 import RMAFormStep2 from "../../components/client/rma/RMAFormStep2";
 import RMAFormStep3 from "../../components/client/rma/RMAFormStep3";
+import rmaService from '../../services/api/rmaService';
 
 const steps = [
   "Select RMA Type & Product",
@@ -24,25 +23,24 @@ const steps = [
 ];
 
 const NewRMA = () => {
-  // Get user from localStorage
-  // Use lazy initialization for state to avoid recreating object on every render
   const [formData, setFormData] = useState(() => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     return {
-      // Step 1: Product & RMA Type
-      rmaType: "return", // "return" or "warranty"
+      // Step 1
+      rmaType: "simple_return",
       productId: "",
+      product: null,
+      saleId: "",
       serialNumber: "",
-      purchaseDate: "",
       receiptNumber: "",
 
-      // Step 2: Issue Details
+      // Step 2
       reason: "",
       issueDescription: "",
-      attachments: [], // Array of file objects
+      attachments: [],
 
-      // Step 3: Contact Info (pre-filled from user profile)
-      contactName: user.name || "",
+      // Contact Info (from user profile)
+      contactName: user.name || `${user.first_name || ""} ${user.last_name || ""}`.trim(),
       contactEmail: user.email || "",
       contactPhone: user.phone || "",
       shippingAddress: user.address || "",
@@ -57,20 +55,41 @@ const NewRMA = () => {
 
   const handleNext = () => {
     setError("");
-    // Validation would happen here
-    setActiveStep((prevStep) => prevStep + 1);
+
+    // Validate Step 1
+    if (activeStep === 0) {
+      if (!formData.productId) {
+        setError("Please select a product");
+        return;
+      }
+      if (formData.rmaType === 'warranty_repair' && !formData.saleId) {
+        setError("Please select the purchase for warranty/repair claim");
+        return;
+      }
+    }
+
+    // Validate Step 2
+    if (activeStep === 1) {
+      if (!formData.reason) {
+        setError("Please select a reason");
+        return;
+      }
+      if (!formData.issueDescription || formData.issueDescription.length < 10) {
+        setError("Please describe the issue in detail (minimum 10 characters)");
+        return;
+      }
+    }
+
+    setActiveStep((prev) => prev + 1);
   };
 
   const handleBack = () => {
-    setActiveStep((prevStep) => prevStep - 1);
+    setActiveStep((prev) => prev - 1);
     setError("");
   };
 
   const handleFormChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
@@ -78,20 +97,22 @@ const NewRMA = () => {
     setError("");
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log(`📎 Submitting RMA with ${formData.attachments?.length || 0} attachment(s)`);
+      const response = await rmaService.submitRma({
+        rmaType: formData.rmaType,
+        productId: formData.productId,
+        saleId: formData.saleId || null,
+        reason: formData.reason,
+        issueDescription: formData.issueDescription,
+        serialNumber: formData.serialNumber,
+        receiptNumber: formData.receiptNumber,
+        attachments: formData.attachments,
+      });
 
-      // Generate RMA number
-      const rmaNumber = `RMA-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(4, '0')}`;
-      setSuccess(`RMA submitted successfully! Your RMA number is: ${rmaNumber}`);
-
-      // Redirect after 3 seconds
-      setTimeout(() => {
-        navigate("/client/dashboard");
-      }, 3000);
-
+      setSuccess(`RMA submitted! Number: ${response.data?.rmaNumber || response.data?.rma_number || 'N/A'}`);
+      setTimeout(() => navigate("/client/rma/history"), 3000);
     } catch (err) {
-      setError("Failed to submit RMA. Please try again.");
+      setError(err.message || "Failed to submit RMA");
     } finally {
       setLoading(false);
     }
@@ -100,12 +121,7 @@ const NewRMA = () => {
   const getStepContent = (step) => {
     switch (step) {
       case 0:
-        return (
-          <RMAFormStep1
-            formData={formData}
-            onChange={handleFormChange}
-          />
-        );
+        return <RMAFormStep1 formData={formData} onChange={handleFormChange} />;
       case 1:
         return (
           <RMAFormStep2
@@ -115,35 +131,28 @@ const NewRMA = () => {
           />
         );
       case 2:
-        return (
-          <RMAFormStep3
-            formData={formData}
-            rmaType={formData.rmaType}
-          />
-        );
+        return <RMAFormStep3 formData={formData} rmaType={formData.rmaType} />;
       default:
-        return "Unknown step";
+        return null;
     }
   };
 
   return (
     <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-          Create New Request
-        </Typography>
-      </Box>
+      <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold' }}>
+        Create New Request
+      </Typography>
 
-      <Paper sx={{ p: 4, borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+      <Paper sx={{ p: 4, borderRadius: 4 }}>
         {error && (
           <Fade in={!!error}>
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{error}</Alert>
+            <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
           </Fade>
         )}
 
         {success && (
           <Fade in={!!success}>
-            <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>{success}</Alert>
+            <Alert severity="success" sx={{ mb: 3 }}>{success}</Alert>
           </Fade>
         )}
 
@@ -155,17 +164,13 @@ const NewRMA = () => {
           ))}
         </Stepper>
 
-        <Box sx={{ mt: 2, minHeight: 300 }}>
-          {getStepContent(activeStep)}
-        </Box>
+        <Box sx={{ mt: 2 }}>{getStepContent(activeStep)}</Box>
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 6, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 6, pt: 3 }}>
           <Button
             disabled={activeStep === 0 || loading}
             onClick={handleBack}
             variant="outlined"
-            size="large"
-            sx={{ borderRadius: 2, px: 4 }}
           >
             Back
           </Button>
@@ -174,8 +179,6 @@ const NewRMA = () => {
             variant="contained"
             onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
             disabled={loading}
-            size="large"
-            sx={{ borderRadius: 2, px: 4 }}
           >
             {loading ? "Processing..." :
               activeStep === steps.length - 1 ? "Submit Request" : "Next Step"}
