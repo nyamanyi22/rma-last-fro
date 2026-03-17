@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   Container,
@@ -92,10 +92,6 @@ const Register = () => {
 
       // Store email for verification step
       localStorage.setItem('pending_email', formData.email);
-
-      // For demo, still use mock verification code
-      // In production, this would be sent via email
-      localStorage.setItem('verification_code', '123456');
 
       handleNext();
     } catch (err) {
@@ -309,38 +305,60 @@ const Register = () => {
 
       case 1:
         return (
-          <Box component="form" onSubmit={handleVerifyEmail}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            <Email sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+            
+            <Typography variant="h6" gutterBottom>
+              Verify your Email
+            </Typography>
+
+            <Typography variant="body1" color="text.secondary" paragraph>
+              We've sent a verification link to <strong>{formData.email}</strong>.
+              Please check your inbox and click the link to activate your account.
+            </Typography>
+
+            {success === 'Resent' && (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                Verification email has been resent!
               </Alert>
             )}
 
-            <Typography variant="body1" color="text.secondary" paragraph>
-              We sent a verification code to <strong>{formData.email}</strong>
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+            )}
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 3, mb: 2 }}>
+              Didn't receive the email? Check your spam folder or try resending.
             </Typography>
 
-            <Typography variant="caption" color="text.secondary" paragraph>
-              For demo purposes, use code: <strong>123456</strong>
-            </Typography>
-
-            <TextField
-              fullWidth
-              label="Verification Code"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
+            <Button 
+              variant="outlined" 
+              onClick={async () => {
+                setError("");
+                setLoading(true);
+                try {
+                  await authService.resendVerificationEmail(formData.email);
+                  setSuccess('Resent');
+                  setTimeout(() => setSuccess(false), 5000);
+                } catch (err) {
+                  setError(err.message || "Failed to resend email.");
+                } finally {
+                  setLoading(false);
+                }
+              }}
               disabled={loading}
-              sx={{ mb: 3 }}
-            />
-
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Button onClick={handleBack}>
-                Back
-              </Button>
-              <Button type="submit" variant="contained">
-                Verify Email
-              </Button>
-            </Box>
+              sx={{ mr: 1 }}
+            >
+              {loading ? <CircularProgress size={20} /> : "Resend Email"}
+            </Button>
+            
+            <Button 
+              component={RouterLink} 
+              to="/login"
+              variant="text"
+            >
+              Back to Login
+            </Button>
           </Box>
         );
 

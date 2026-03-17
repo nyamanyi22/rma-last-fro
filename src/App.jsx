@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -21,6 +21,10 @@ import CustomerManagement from './pages/admin/CustomerManagement';
 import SalesManagement from './pages/admin/SalesManagement';
 import RMAReports from './pages/admin/RMAReports';
 import AdminLayout from './layouts/AdminLayout';
+import AdminProfile from './pages/admin/AdminProfile';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
+import VerifyEmail from './components/auth/VerifyEmail';
 
 // Client Layout
 import ClientLayout from './layouts/ClientLayout';
@@ -100,6 +104,9 @@ function App() {
             <Route path="/login" element={<CustomerLogin />} />
             <Route path="/admin/login" element={<StaffLogin />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/" element={<Navigate to="/login" />} />
 
             {/* Customer Routes - SINGLE DEFINITION */}
@@ -129,6 +136,7 @@ function App() {
               <Route path="customers" element={<CustomerManagement />} />
               <Route path="sales" element={<SalesManagement />} />
               <Route path="reports" element={<RMAReports />} />
+              <Route path="profile" element={<AdminProfile />} />
 
               {/* Placeholders for now */}
               <Route path="settings" element={<div style={{ padding: 20 }}>Settings Module Coming Soon</div>} />
@@ -151,6 +159,7 @@ function App() {
               <Route path="security" element={<SuperAdminSecurity />} />
               <Route path="reports" element={<SuperAdminReports />} />
               <Route path="sales" element={<SuperAdminSalesManagement />} />
+              <Route path="profile" element={<AdminProfile />} />
             </Route>
 
             {/* 404 Routes */}

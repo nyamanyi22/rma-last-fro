@@ -83,6 +83,7 @@ const CustomerManagement = () => {
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [totalCount, setTotalCount] = useState(0);
     const [exporting, setExporting] = useState(false);
 
     const showSuccess = (msg) => {
@@ -356,23 +357,27 @@ const CustomerManagement = () => {
                     />
                     <Stack direction="row" spacing={1}>
                         <Tooltip title="Refresh Catalog">
-                            <IconButton onClick={loadCustomers} disabled={loading} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                                <Refresh />
-                            </IconButton>
+                            <span>
+                                <IconButton onClick={loadCustomers} disabled={loading} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+                                    <Refresh />
+                                </IconButton>
+                            </span>
                         </Tooltip>
                         <Tooltip title={exporting ? "Exporting..." : "Export Customer List"}>
-                            <IconButton
-                                onClick={handleExport}
-                                disabled={exporting}
-                                sx={{
-                                    borderRadius: 3,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    position: 'relative'
-                                }}
-                            >
-                                {exporting ? <CircularProgress size={20} color="inherit" /> : <FileDownloadOutlined />}
-                            </IconButton>
+                            <span>
+                                <IconButton
+                                    onClick={handleExport}
+                                    disabled={exporting}
+                                    sx={{
+                                        borderRadius: 3,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    {exporting ? <CircularProgress size={20} color="inherit" /> : <FileDownloadOutlined />}
+                                </IconButton>
+                            </span>
                         </Tooltip>
                     </Stack>
                 </Stack>

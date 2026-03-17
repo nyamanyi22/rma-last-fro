@@ -416,16 +416,22 @@ class RMAService {
                 formData.append('sale_id', String(rmaData.saleId));
             }
 
-            formData.append('reason', rmaData.reason);
+            formData.append('reason', (rmaData.reason === 'other_return' || rmaData.reason === 'other_warranty') ? 'other' : rmaData.reason);
             formData.append('issue_description', rmaData.issueDescription);
 
             if (rmaData.serialNumber) {
-                formData.append('serial_number', rmaData.serialNumber);
+                formData.append('serial_number_provided', rmaData.serialNumber);
             }
 
             if (rmaData.receiptNumber) {
                 formData.append('receipt_number', rmaData.receiptNumber);
             }
+
+            // Contact Info
+            if (rmaData.contactName) formData.append('contact_name', rmaData.contactName);
+            if (rmaData.contactEmail) formData.append('contact_email', rmaData.contactEmail);
+            if (rmaData.contactPhone) formData.append('contact_phone', rmaData.contactPhone);
+            if (rmaData.shippingAddress) formData.append('shipping_address', rmaData.shippingAddress);
 
             // Handle attachments
             if (rmaData.attachments && rmaData.attachments.length > 0) {

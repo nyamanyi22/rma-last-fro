@@ -30,7 +30,8 @@ import {
     Group,
     ExitToApp,
     ChevronLeft,
-    Receipt
+    Receipt,
+    Person
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 
@@ -72,6 +73,7 @@ const SuperAdminLayout = () => {
         { text: 'Security', icon: <Security />, path: '/super-admin/security' },
         { text: 'Settings', icon: <Settings />, path: '/super-admin/settings' },
         { text: 'Reports', icon: <BarChart />, path: '/super-admin/reports' },
+        { text: 'My Profile', icon: <Person />, path: '/super-admin/profile' },
     ];
 
     return (
@@ -101,8 +103,8 @@ const SuperAdminLayout = () => {
                     </Typography>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
-                            {user.name || 'Admin'}
+                        <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 500 }}>
+                            Welcome, {user.first_name || user.name || 'Admin'}
                         </Typography>
                         <IconButton
                             size="large"
@@ -113,7 +115,7 @@ const SuperAdminLayout = () => {
                             color="inherit"
                         >
                             <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
-                                {user.name ? user.name[0].toUpperCase() : 'A'}
+                                {user.first_name ? user.first_name[0].toUpperCase() : (user.name ? user.name[0].toUpperCase() : 'A')}
                             </Avatar>
                         </IconButton>
                         <Menu
@@ -131,6 +133,13 @@ const SuperAdminLayout = () => {
                             open={Boolean(anchorEl)}
                             onClose={handleClose}
                         >
+                            <MenuItem onClick={() => { navigate('/super-admin/profile'); handleClose(); }}>
+                                <ListItemIcon>
+                                    <Person fontSize="small" />
+                                </ListItemIcon>
+                                Profile
+                            </MenuItem>
+                            <Divider />
                             <MenuItem onClick={handleLogout}>
                                 <ListItemIcon>
                                     <ExitToApp fontSize="small" />

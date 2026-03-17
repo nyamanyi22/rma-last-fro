@@ -27,7 +27,8 @@ import {
     ExitToApp,
     Assignment,
     Inventory,
-    Receipt
+    Receipt,
+    Person
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 
@@ -66,6 +67,7 @@ const AdminLayout = () => {
         { text: 'Customers', icon: <People />, path: '/admin/customers' },
         { text: 'Sales', icon: <Receipt />, path: '/admin/sales' },
         { text: 'Reports', icon: <BarChart />, path: '/admin/reports' },
+        { text: 'My Profile', icon: <Person />, path: '/admin/profile' },
         { text: 'Settings', icon: <Settings />, path: '/admin/settings' },
     ];
 
@@ -96,8 +98,8 @@ const AdminLayout = () => {
                     </Typography>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
-                            {user.name || 'Admin'}
+                        <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 500 }}>
+                            Welcome, {user.first_name || user.name || 'Admin'}
                         </Typography>
                         <IconButton
                             size="large"
@@ -108,7 +110,7 @@ const AdminLayout = () => {
                             color="inherit"
                         >
                             <Avatar sx={{ bgcolor: theme.palette.secondary.main }}>
-                                {user.name ? user.name[0].toUpperCase() : 'A'}
+                                {user.first_name ? user.first_name[0].toUpperCase() : (user.name ? user.name[0].toUpperCase() : 'A')}
                             </Avatar>
                         </IconButton>
                         <Menu
@@ -126,6 +128,13 @@ const AdminLayout = () => {
                             open={Boolean(anchorEl)}
                             onClose={handleClose}
                         >
+                            <MenuItem onClick={() => { navigate('/admin/profile'); handleClose(); }}>
+                                <ListItemIcon>
+                                    <Person fontSize="small" />
+                                </ListItemIcon>
+                                Profile
+                            </MenuItem>
+                            <Divider />
                             <MenuItem onClick={handleLogout}>
                                 <ListItemIcon>
                                     <ExitToApp fontSize="small" />

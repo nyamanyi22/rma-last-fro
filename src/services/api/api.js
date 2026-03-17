@@ -29,6 +29,12 @@ api.interceptors.request.use((config) => {
         console.log('🔑 Token added');
     }
 
+    // IMPORTANT: If sending FormData, delete the default Content-Type 
+    // to let the browser set it with the correct multipart boundary
+    if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+    }
+
     // Log FormData contents if present (for debugging)
     if (config.data instanceof FormData) {
         console.log('📎 FormData contents:');
@@ -81,13 +87,17 @@ export const authApi = {
     staffLogin: (email, password) => api.post('/staff/login', { email, password }),
     logout: () => api.post('/logout'),
     getMe: () => api.get('/me'),
+    forgotPassword: (data) => api.post('/forgot-password', data),
+    resetPassword: (data) => api.post('/reset-password', data),
+    verifyEmail: (data) => api.post('/verify-email', data),
+    resendVerification: (data) => api.post('/resend-verification', data),
 };
 
 // ==================== PROFILE ENDPOINTS ====================
 export const profileApi = {
     updateProfile: (data) => api.put('/profile', data),
-    getProfile: () => api.get('/customer/profile'), // Customer profile
-    deleteAccount: () => api.delete('/customer/profile'),
+    getProfile: () => api.get('/profile'), // Now global
+    deleteAccount: () => api.delete('/profile'),
 };
 
 // ==================== PRODUCT ENDPOINTS ====================
@@ -165,11 +175,10 @@ export const rmaApi = {
 
     submitRma: (data) => {
         // If it's already FormData, send it directly
-        // ⚠️ Do NOT manually set Content-Type - let Axios set it automatically
-        // with the correct multipart boundary (e.g. boundary=----WebKitFormBoundaryXXX)
         if (data instanceof FormData) {
             return api.post('/customer/rma/submit', data, {
-                headers: { 'Content-Type': undefined }  // Let browser/Axios set boundary automatically
+                // Set explicitly to undefined to let axios + browser handle boundary
+                headers: { 'Content-Type': undefined }
             });
         }
 
@@ -179,9 +188,11 @@ export const rmaApi = {
         // Add all fields
         Object.keys(data).forEach(key => {
             if (key === 'attachments' && Array.isArray(data[key])) {
-                data[key].forEach(file => {
-                    if (file instanceof File) {
-                        formData.append('attachments[]', file);
+                data[key].forEach(item => {
+                    // Extract File object from internal wrapper if necessary
+                    const fileToAppend = item instanceof File ? item : item.file;
+                    if (fileToAppend instanceof File) {
+                        formData.append('attachments[]', fileToAppend);
                     }
                 });
             } else if (data[key] !== null && data[key] !== undefined) {
@@ -190,7 +201,7 @@ export const rmaApi = {
         });
 
         return api.post('/customer/rma/submit', formData, {
-            headers: { 'Content-Type': undefined }  // Let browser/Axios set boundary automatically
+            headers: { 'Content-Type': undefined }
         });
     },
     /**
@@ -364,6 +375,18 @@ export const rmaApi = {
      * PUT /admin/rma/{id}/shipping
      */
     updateShipping: (id, data) => api.put(`/admin/rma/${id}/shipping`, data),
+};
+
+// ==================== SUPER ADMIN ENDPOINTS ====================
+export const superAdminApi = {
+    // Dashboard overview
+    getOverview: () => api.get('/super-admin/overview'),
+
+    // Staff management
+    getStaff:    (params) => api.get('/super-admin/staff', { params }),
+    createStaff: (data)   => api.post('/super-admin/staff', data),
+    updateStaff: (id, data) => api.put(`/super-admin/staff/${id}`, data),
+    deleteStaff: (id)     => api.delete(`/super-admin/staff/${id}`),
 };
 
 export default api;

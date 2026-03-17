@@ -211,9 +211,9 @@ class AuthService {
     /**
      * Verify email
      */
-    async verifyEmail(id, hash) {
+    async verifyEmail(email, token) {
         try {
-            const response = await authApi.verifyEmail(id, hash);
+            const response = await authApi.verifyEmail({ email, token });
             return response.data;
         } catch (error) {
             throw this.handleError(error);
@@ -223,9 +223,9 @@ class AuthService {
     /**
      * Resend verification email
      */
-    async resendVerificationEmail() {
+    async resendVerificationEmail(email) {
         try {
-            const response = await authApi.resendVerificationEmail();
+            const response = await authApi.resendVerification({ email });
             return response.data;
         } catch (error) {
             throw this.handleError(error);

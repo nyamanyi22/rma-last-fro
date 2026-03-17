@@ -381,6 +381,65 @@ const RMADetails = () => {
                                     variant="outlined"
                                 />
                             </Grid>
+
+                            {/* Integrated Attachments */}
+                            {rma.attachments && rma.attachments.length > 0 && (
+                                <Grid size={12}>
+                                    <Divider sx={{ my: 2 }} />
+                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <AttachFile fontSize="small" /> Attachments ({rma.attachments.length})
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
+                                        {rma.attachments.map((file, index) => (
+                                            <Box
+                                                key={index}
+                                                sx={{
+                                                    width: 100,
+                                                    height: 100,
+                                                    borderRadius: 2,
+                                                    overflow: 'hidden',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    position: 'relative',
+                                                    cursor: 'pointer',
+                                                    '&:hover .overlay': { opacity: 1 }
+                                                }}
+                                                onClick={() => handleViewAttachment(file)}
+                                            >
+                                                {file.isImage ? (
+                                                    <Box
+                                                        component="img"
+                                                        src={file.thumbnail || file.url}
+                                                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    />
+                                                ) : (
+                                                    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100' }}>
+                                                        <Description color="action" />
+                                                    </Box>
+                                                )}
+                                                <Box
+                                                    className="overlay"
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        bgcolor: 'rgba(0,0,0,0.4)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        opacity: 0,
+                                                        transition: 'opacity 0.2s'
+                                                    }}
+                                                >
+                                                    <Visibility sx={{ color: 'white' }} />
+                                                </Box>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Grid>
+                            )}
                         </Grid>
                     </Paper>
 

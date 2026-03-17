@@ -92,7 +92,7 @@ const ClientLayout = () => {
                     </Typography>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                        <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 500 }}>
                             Welcome, {user.first_name || user.name || 'Customer'}
                         </Typography>
                         <IconButton

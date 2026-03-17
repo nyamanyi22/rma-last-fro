@@ -124,7 +124,6 @@ const ProductManagement = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
-
   const loadProducts = async () => {
     setLoading(true);
     try {
@@ -142,14 +141,21 @@ const ProductManagement = () => {
         setProducts(response.data.data);
         setTotalCount(response.data.total);
 
-        // Fetch all products for accurate stats (or handle via backend if possible)
+        // FETCH & MAP ALL DATA FOR STATS
         const allRes = await ProductService.getProducts({ per_page: 999 });
         if (allRes.success) {
+          // IMPORTANT: Ensure these are mapped so we have 'stockQuantity' and 'isActive'
           const allProducts = allRes.data.data;
+
+          const LOW_STOCK_THRESHOLD = 10;
+
           setStats({
             total: allRes.data.total,
             active: allProducts.filter(p => p.isActive).length,
-            outOfStock: allProducts.filter(p => p.stockQuantity === 0).length,
+            // Check both the mapped name and ensure it's above 0 but below threshold
+            outOfStock: allProducts.filter(p =>
+              p.stockQuantity <= LOW_STOCK_THRESHOLD
+            ).length,
             categories: new Set(allProducts.map(p => p.category)).size
           });
         }
@@ -160,7 +166,6 @@ const ProductManagement = () => {
       setLoading(false);
     }
   };
-
   const loadFilters = async () => {
     try {
       const [categoriesRes, brandsRes] = await Promise.all([
