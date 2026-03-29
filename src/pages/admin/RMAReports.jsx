@@ -12,7 +12,7 @@ import rmaService from '../../services/api/rmaService';
 
 const STATUS_COLORS = {
     pending: '#ff9800',
-    under_review: '#2196f3',
+    under_review: '#89b3d6ff',
     approved: '#4caf50',
     rejected: '#f44336',
     in_repair: '#9c27b0',

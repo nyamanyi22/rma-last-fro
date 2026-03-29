@@ -17,9 +17,16 @@ import {
     Alert,
     Pagination
 } from '@mui/material';
-import { Visibility, Search, FilterList } from '@mui/icons-material';
+import { Visibility, Search, FilterList, Refresh } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import rmaService from '../../services/api/rmaService';
+
+const spinAnimation = {
+    '@keyframes spin': {
+        '0%': { transform: 'rotate(0deg)' },
+        '100%': { transform: 'rotate(360deg)' },
+    },
+};
 
 const ClientRMAHistory = () => {
     const navigate = useNavigate();
@@ -111,9 +118,9 @@ const ClientRMAHistory = () => {
 
     const getTypeChip = (type) => {
         const typeMap = {
-            'return': { color: 'primary', label: 'Return' },
-            'warranty': { color: 'secondary', label: 'Warranty' },
-            'repair': { color: 'info', label: 'Repair' },
+            'simple_return': { color: 'primary', label: 'Simple Return' },
+            'warranty_repair': { color: 'secondary', label: 'Warranty / Repair' },
+
         };
 
         const config = typeMap[type] || { color: 'default', label: type };
@@ -153,8 +160,19 @@ const ClientRMAHistory = () => {
                     }}
                     sx={{ maxWidth: 400 }}
                 />
-                <IconButton>
-                    <FilterList />
+                <IconButton
+                    onClick={loadRmas}
+                    disabled={loading}
+                    color="primary"
+                    sx={{
+                        bgcolor: 'primary.50',
+                        '&:hover': { bgcolor: 'primary.100' }
+                    }}
+                >
+                    <Refresh sx={{
+                        ...spinAnimation,
+                        animation: loading ? 'spin 2s linear infinite' : 'none'
+                    }} />
                 </IconButton>
                 {totalItems > 0 && (
                     <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>

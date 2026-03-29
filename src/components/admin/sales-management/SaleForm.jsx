@@ -13,6 +13,7 @@ import {
     Stack,
     InputAdornment,
     Divider,
+    Snackbar,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
@@ -32,6 +33,7 @@ import productService from "../../../services/api/productService";
 import customerService from "../../../services/api/customerService";
 
 const SaleForm = ({ sale, mode, onSave, onCancel, loading, errors: backendErrors = {} }) => {
+    const [showToast, setShowToast] = useState(false);
     const [formData, setFormData] = useState({
         invoiceNumber: "",
         customerId: "",
@@ -53,6 +55,10 @@ const SaleForm = ({ sale, mode, onSave, onCancel, loading, errors: backendErrors
     const [customersLoading, setCustomersLoading] = useState(false);
     const [localErrors, setLocalErrors] = useState({});
     const [emailEdited, setEmailEdited] = useState(false);
+
+    useEffect(() => {
+        if (Object.keys(backendErrors).length > 0) setShowToast(true);
+    }, [backendErrors]);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -158,7 +164,9 @@ const SaleForm = ({ sale, mode, onSave, onCancel, loading, errors: backendErrors
         if (formData.amount < 0) newErrors.amount = "Invalid amount";
 
         setLocalErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        const isValid = Object.keys(newErrors).length === 0;
+        if (!isValid) setShowToast(true);
+        return isValid;
     };
 
     const handleSubmit = (e) => {
@@ -180,6 +188,16 @@ const SaleForm = ({ sale, mode, onSave, onCancel, loading, errors: backendErrors
 
     return (
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+            <Snackbar
+                open={showToast}
+                autoHideDuration={6000}
+                onClose={() => setShowToast(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setShowToast(false)} severity="error" sx={{ width: '100%', borderRadius: 2, fontWeight: 600, boxShadow: 3 }}>
+                    There are validation errors with your submission. Please check the highlighted fields.
+                </Alert>
+            </Snackbar>
             <Stack spacing={4}>
                 {/* Section 1: Order Context */}
                 <Box>

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -17,6 +17,7 @@ import {
   CircularProgress,
   InputAdornment,
   Stack,
+  Snackbar,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
@@ -64,7 +65,8 @@ const FormSection = ({ title, icon: Icon, children }) => (
   </Paper>
 );
 
-const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, brands }) => {
+const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, brands, errors: backendErrors = {} }) => {
+  const [showToast, setShowToast] = useState(false);
   const [formData, setFormData] = useState({
     sku: "",
     name: "",
@@ -78,6 +80,10 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
     isActive: true,
   });
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (Object.keys(backendErrors).length > 0) setShowToast(true);
+  }, [backendErrors]);
 
   useEffect(() => {
     if (product && mode === "edit") {
@@ -103,6 +109,15 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: "" }));
   };
 
+  const getFieldError = (field) => {
+    const backendKeyMap = {
+      defaultWarrantyMonths: "default_warranty_months",
+      stockQuantity: "stock_quantity"
+    };
+    const backendKey = backendKeyMap[field] || field;
+    return errors[field] || (backendErrors[backendKey] && backendErrors[backendKey][0]) || (backendErrors[field] && backendErrors[field][0]);
+  };
+
   const validateForm = () => {
     const newErrors = {};
     if (!formData.sku.trim()) newErrors.sku = "SKU is required";
@@ -112,7 +127,9 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
     if (!formData.price || isNaN(formData.price) || parseFloat(formData.price) <= 0) newErrors.price = "Price must be > 0";
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const isValid = Object.keys(newErrors).length === 0;
+    if (!isValid) setShowToast(true);
+    return isValid;
   };
 
   const handleSubmit = (e) => {
@@ -129,6 +146,16 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ py: 2 }}>
+      <Snackbar
+        open={showToast}
+        autoHideDuration={6000}
+        onClose={() => setShowToast(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setShowToast(false)} severity="error" sx={{ width: '100%', borderRadius: 2, fontWeight: 600, boxShadow: 3 }}>
+          There are validation errors with your submission. Please check the highlighted fields.
+        </Alert>
+      </Snackbar>
       <Grid container spacing={4}>
         {/* Core Info */}
         <Grid size={12}>
@@ -140,8 +167,8 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
                   label="Product SKU"
                   value={formData.sku}
                   onChange={(e) => handleChange("sku", e.target.value)}
-                  error={!!errors.sku}
-                  helperText={errors.sku}
+                  error={!!getFieldError("sku")}
+                  helperText={getFieldError("sku")}
                   disabled={mode === "edit"}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, fontWeight: 700, fontFamily: 'monospace' } }}
                   InputProps={{ startAdornment: <InputAdornment position="start"><BookmarkBorder fontSize="small" /></InputAdornment> }}
@@ -153,8 +180,8 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
                   label="Product Listing Name"
                   value={formData.name}
                   onChange={(e) => handleChange("name", e.target.value)}
-                  error={!!errors.name}
-                  helperText={errors.name}
+                  error={!!getFieldError("name")}
+                  helperText={getFieldError("name")}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                 />
               </Grid>
@@ -166,7 +193,7 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
         <Grid size={{ xs: 12, md: 6 }}>
           <FormSection title="Classification" icon={Translate}>
             <Stack spacing={3}>
-              <FormControl fullWidth error={!!errors.category}>
+              <FormControl fullWidth error={!!getFieldError("category")}>
                 <InputLabel>Category</InputLabel>
                 <Select
                   value={formData.category}
@@ -178,10 +205,10 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
                     <MenuItem key={cat} value={cat}>{cat}</MenuItem>
                   ))}
                 </Select>
-                {errors.category && <Typography variant="caption" color="error" sx={{ mx: 2, mt: 0.5 }}>{errors.category}</Typography>}
+                {getFieldError("category") && <Typography variant="caption" color="error" sx={{ mx: 2, mt: 0.5 }}>{getFieldError("category")}</Typography>}
               </FormControl>
 
-              <FormControl fullWidth error={!!errors.brand}>
+              <FormControl fullWidth error={!!getFieldError("brand")}>
                 <InputLabel>Brand / Manufacturer</InputLabel>
                 <Select
                   value={formData.brand}
@@ -193,6 +220,7 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
                     <MenuItem key={brand} value={brand}>{brand}</MenuItem>
                   ))}
                 </Select>
+                {getFieldError("brand") && <Typography variant="caption" color="error" sx={{ mx: 2, mt: 0.5 }}>{getFieldError("brand")}</Typography>}
               </FormControl>
             </Stack>
           </FormSection>
@@ -208,7 +236,8 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
                 type="number"
                 value={formData.price}
                 onChange={(e) => handleChange("price", e.target.value)}
-                error={!!errors.price}
+                error={!!getFieldError("price")}
+                helperText={getFieldError("price")}
                 InputProps={{
                   startAdornment: <InputAdornment position="start">$</InputAdornment>,
                   sx: { borderRadius: 3, fontWeight: 800 }
@@ -222,6 +251,8 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
                     type="number"
                     value={formData.stockQuantity}
                     onChange={(e) => handleChange("stockQuantity", e.target.value)}
+                    error={!!getFieldError("stockQuantity")}
+                    helperText={getFieldError("stockQuantity")}
                     InputProps={{
                       startAdornment: <InputAdornment position="start"><Inventory2 fontSize="small" /></InputAdornment>,
                       sx: { borderRadius: 3 }
@@ -229,7 +260,7 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
                   />
                 </Grid>
                 <Grid size={6}>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth error={!!getFieldError("defaultWarrantyMonths")}>
                     <InputLabel>Warranty</InputLabel>
                     <Select
                       value={formData.defaultWarrantyMonths}
@@ -239,6 +270,7 @@ const ProductForm = ({ product, mode, onSave, onCancel, loading, categories, bra
                     >
                       {warrantyOptions.map((m) => <MenuItem key={m} value={m}>{m} Months</MenuItem>)}
                     </Select>
+                    {getFieldError("defaultWarrantyMonths") && <Typography variant="caption" color="error" sx={{ mx: 2, mt: 0.5 }}>{getFieldError("defaultWarrantyMonths")}</Typography>}
                   </FormControl>
                 </Grid>
               </Grid>

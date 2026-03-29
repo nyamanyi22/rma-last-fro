@@ -42,31 +42,68 @@ import SuperAdminSalesManagement from './pages/super-admin/SuperAdminSalesManage
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: '#6366f1',
+      dark: '#4f46e5',
+      light: '#818cf8',
     },
     secondary: {
-      main: '#dc004e',
+      main: '#a855f7',
+      dark: '#7c3aed',
+      light: '#c084fc',
     },
     background: {
-      default: '#f4f6f8',
+      default: '#f1f5f9',
       paper: '#ffffff',
     },
+    text: {
+      primary: '#0f172a',
+      secondary: '#64748b',
+    },
+    success: { main: '#10b981' },
+    warning: { main: '#f59e0b' },
+    error: { main: '#ef4444' },
+    info: { main: '#3b82f6' },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h4: { fontWeight: 800, letterSpacing: '-0.5px' },
+    h5: { fontWeight: 700 },
+    h6: { fontWeight: 700 },
+    subtitle1: { fontWeight: 600 },
+    subtitle2: { fontWeight: 600 },
+  },
+  shape: {
+    borderRadius: 12,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
+          fontWeight: 600,
+          borderRadius: 10,
         },
       },
     },
     MuiPaper: {
       styleOverrides: {
-        rounded: {
+        root: {
           borderRadius: 12,
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          fontWeight: 600,
+        },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 600,
         },
       },
     },
@@ -74,7 +111,7 @@ const theme = createTheme({
 });
 
 // Simple route protection
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, fallback = "/unauthorized" }) => {
   let user = {};
   try {
     user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -87,7 +124,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/unauthorized" />;
+    return <Navigate to={fallback} />;
   }
 
   return children;
@@ -132,14 +169,32 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="rma" element={<RMAManagement />} />
-              <Route path="products" element={<ProductManagement />} />
-              <Route path="customers" element={<CustomerManagement />} />
-              <Route path="sales" element={<SalesManagement />} />
-              <Route path="reports" element={<RMAReports />} />
+              
+              {/* Restricted Admin Routes */}
+              <Route path="products" element={
+                <ProtectedRoute allowedRoles={['admin', 'super_admin']} fallback="/admin/dashboard">
+                  <ProductManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="customers" element={
+                <ProtectedRoute allowedRoles={['admin', 'super_admin']} fallback="/admin/dashboard">
+                  <CustomerManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="sales" element={
+                <ProtectedRoute allowedRoles={['admin', 'super_admin']} fallback="/admin/dashboard">
+                  <SalesManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="reports" element={
+                <ProtectedRoute allowedRoles={['admin', 'super_admin']} fallback="/admin/dashboard">
+                  <RMAReports />
+                </ProtectedRoute>
+              } />
+              
               <Route path="profile" element={<AdminProfile />} />
 
               {/* Placeholders for now */}
-              <Route path="settings" element={<div style={{ padding: 20 }}>Settings Module Coming Soon</div>} />
               <Route path="notifications" element={<div style={{ padding: 20 }}>Notifications Module Coming Soon</div>} />
             </Route>
 

@@ -6,9 +6,18 @@ import {
   Button, 
   Paper, 
   Alert,
-  CircularProgress
+  CircularProgress,
+  Fade,
+  Grow
 } from '@mui/material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { 
+  Email as EmailIcon, 
+  CheckCircle as SuccessIcon, 
+  Error as ErrorIcon,
+  Refresh as RefreshIcon,
+  ArrowBack as BackIcon
+} from '@mui/icons-material';
+import { useNavigate, useSearchParams, Link as RouterLink } from 'react-router-dom';
 import authService from '../../services/api/authService';
 
 const VerifyEmail = () => {
@@ -26,14 +35,13 @@ const VerifyEmail = () => {
     if (email && token) {
       handleVerify();
     } else {
-      setError('Missing verification information.');
+      setError('Missing verification information. Please check your link.');
       setLoading(false);
     }
-  }, []);
+  }, [email, token]);
 
   const handleVerify = async () => {
     setVerifying(true);
-    setLoading(false);
     setError(null);
 
     try {
@@ -43,11 +51,12 @@ const VerifyEmail = () => {
       setError(err.message || 'Email verification failed. The link may be expired.');
     } finally {
       setVerifying(false);
+      setLoading(false);
     }
   };
 
   const handleResend = async () => {
-    setLoading(true);
+    setVerifying(true);
     setError(null);
     try {
       await authService.resendVerificationEmail(email);
@@ -56,97 +65,212 @@ const VerifyEmail = () => {
     } catch (err) {
       setError(err.message || 'Failed to resend verification email.');
     } finally {
-      setLoading(false);
+      setVerifying(false);
     }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%', borderRadius: 3, textAlign: 'center' }}>
-          <Typography component="h1" variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
-            Email Verification
-          </Typography>
-
-          {(loading || verifying) && (
-            <Box sx={{ py: 4 }}>
-              <CircularProgress />
-              <Typography sx={{ mt: 2 }}>Verifying your email...</Typography>
-            </Box>
-          )}
-
-          {error && (
-            <Box sx={{ mt: 2 }}>
-              <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
-              <Typography variant="body2" gutterBottom>
-                Something went wrong. You can try to resend the verification email.
+    <Box 
+      sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+        py: 4
+      }}
+    >
+      <Container component="main" maxWidth="sm">
+        <Grow in timeout={800}>
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              p: { xs: 4, md: 6 }, 
+              borderRadius: 4, 
+              textAlign: 'center',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.8)',
+              background: 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(10px)'
+            }}
+          >
+            {/* Logo area or Title */}
+            <Box sx={{ mb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Box 
+                sx={{ 
+                  width: 80, 
+                  height: 80, 
+                  borderRadius: '24px', 
+                  bgcolor: 'primary.main', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  mb: 3,
+                  boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)'
+                }}
+              >
+                {success === true ? (
+                  <SuccessIcon sx={{ fontSize: 48, color: 'white' }} />
+                ) : error ? (
+                  <ErrorIcon sx={{ fontSize: 48, color: 'white' }} />
+                ) : (
+                  <EmailIcon sx={{ fontSize: 48, color: 'white' }} />
+                )}
+              </Box>
+              <Typography 
+                component="h1" 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 800, 
+                  color: 'text.primary',
+                  background: 'linear-gradient(to right, #4f46e5, #9333ea)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}
+              >
+                Email Verification
               </Typography>
-              <Button 
-                variant="outlined" 
-                onClick={handleResend} 
-                disabled={loading || !email}
-                sx={{ mt: 2 }}
-              >
-                Resend Verification Email
-              </Button>
             </Box>
-          )}
 
-          {success === true && (
-            <Box sx={{ mt: 2 }}>
-              <Alert severity="success" sx={{ mb: 3 }}>
-                Your email has been successfully verified!
-              </Alert>
-              <Button 
-                variant="contained" 
-                fullWidth 
-                onClick={() => navigate('/login')}
-                sx={{ mt: 2 }}
-              >
-                Go to Login
-              </Button>
+            <Box sx={{ minHeight: 180, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              {(loading || verifying) && (
+                <Fade in>
+                  <Box sx={{ py: 2 }}>
+                    <CircularProgress size={60} thickness={4} sx={{ mb: 3 }} />
+                    <Typography variant="h6" color="text.secondary">
+                      {verifying && !loading ? 'Validating your details...' : 'Working on it...'}
+                    </Typography>
+                  </Box>
+                </Fade>
+              )}
+
+              {error && !verifying && (
+                <Fade in>
+                  <Box>
+                    <Alert 
+                      severity="error" 
+                      variant="outlined"
+                      sx={{ 
+                        mb: 4, 
+                        borderRadius: 2,
+                        '& .MuiAlert-icon': { fontSize: 28 }
+                      }}
+                    >
+                      {error}
+                    </Alert>
+                    <Typography variant="body1" color="text.secondary" paragraph>
+                      Something went wrong. The link might be expired or already used.
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                      <Button 
+                        fullWidth
+                        variant="contained" 
+                        startIcon={<RefreshIcon />}
+                        onClick={handleResend} 
+                        disabled={!email}
+                        sx={{ height: 48 }}
+                      >
+                        Resend Verification
+                      </Button>
+                      <Button 
+                        fullWidth
+                        variant="outlined" 
+                        component={RouterLink}
+                        to="/login"
+                        startIcon={<BackIcon />}
+                        sx={{ height: 48 }}
+                      >
+                        Back to Login
+                      </Button>
+                    </Box>
+                  </Box>
+                </Fade>
+              )}
+
+              {success === true && !verifying && (
+                <Fade in>
+                  <Box>
+                    <Alert 
+                      severity="success" 
+                      variant="outlined"
+                      sx={{ 
+                        mb: 4, 
+                        borderRadius: 2,
+                        '& .MuiAlert-icon': { fontSize: 28 }
+                      }}
+                    >
+                      Verification Successful!
+                    </Alert>
+                    <Typography variant="body1" color="text.secondary" paragraph>
+                      Your account is now active and ready. You can now access your dashboard and submit RMA requests.
+                    </Typography>
+                    <Button 
+                      variant="contained" 
+                      fullWidth 
+                      size="large"
+                      onClick={() => navigate('/login')}
+                      sx={{ 
+                        height: 56, 
+                        fontSize: '1.1rem',
+                        boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)'
+                      }}
+                    >
+                      Login to Your Account
+                    </Button>
+                  </Box>
+                </Fade>
+              )}
+
+              {success === 'Resent' && !verifying && (
+                <Fade in>
+                  <Box>
+                    <Alert severity="info" sx={{ mb: 4, borderRadius: 2 }}>
+                      A new verification link has been sent to <strong>{email}</strong>.
+                    </Alert>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+                      Please wait a few minutes. Don't forget to check your spam folder!
+                    </Typography>
+                    <Button 
+                      variant="outlined" 
+                      fullWidth 
+                      component={RouterLink}
+                      to="/login"
+                      sx={{ height: 48 }}
+                    >
+                      Return to Login
+                    </Button>
+                  </Box>
+                </Fade>
+              )}
+
+              {!loading && !verifying && !error && !success && (
+                <Fade in>
+                  <Box>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                      Welcome! Click the button below to confirm your identity and complete your registration.
+                    </Typography>
+                    <Button 
+                      variant="contained" 
+                      fullWidth 
+                      size="large"
+                      onClick={handleVerify}
+                      sx={{ height: 56, fontSize: '1.1rem' }}
+                    >
+                      Verify My Email
+                    </Button>
+                  </Box>
+                </Fade>
+              )}
             </Box>
-          )}
 
-          {success === 'Resent' && (
-            <Box sx={{ mt: 2 }}>
-              <Alert severity="info" sx={{ mb: 3 }}>
-                Verification email has been resent to {email}.
-              </Alert>
-              <Button 
-                variant="outlined" 
-                fullWidth 
-                onClick={() => navigate('/login')}
-              >
-                Back to Login
-              </Button>
-            </Box>
-          )}
-
-          {!loading && !verifying && !error && !success && (
-            <Box sx={{ mt: 2 }}>
-              <Typography sx={{ mb: 3 }}>
-                Click the button below to verify your email address.
+            <Box sx={{ mt: 6 }}>
+              <Typography variant="caption" color="text.disabled">
+                &copy; {new Date().getFullYear()} {import.meta.env.VITE_APP_NAME || 'RMA Management System'}. All rights reserved.
               </Typography>
-              <Button 
-                variant="contained" 
-                fullWidth 
-                onClick={handleVerify}
-              >
-                Verify Email
-              </Button>
             </Box>
-          )}
-        </Paper>
-      </Box>
-    </Container>
+          </Paper>
+        </Grow>
+      </Container>
+    </Box>
   );
 };
 

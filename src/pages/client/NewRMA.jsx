@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Paper,
@@ -8,7 +8,8 @@ import {
   StepLabel,
   Button,
   Alert,
-  Fade
+  Fade,
+  Snackbar
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import RMAFormStep1 from "../../components/client/rma/RMAFormStep1";
@@ -44,40 +45,46 @@ const NewRMA = () => {
       contactEmail: user.email || "",
       contactPhone: user.phone || "",
       shippingAddress: user.address || "",
+      policyAgreed: false,
     };
   });
 
   const [activeStep, setActiveStep] = useState(0);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [showErrorToast, setShowErrorToast] = useState(false);
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleNext = () => {
-    setError("");
+    setErrors({});
+    setShowErrorToast(false);
+    const newErrors = {};
 
     // Validate Step 1
     if (activeStep === 0) {
       if (!formData.productId) {
-        setError("Please select a product");
-        return;
+        newErrors.productId = "Please select a product";
       }
       if (formData.rmaType === 'warranty_repair' && !formData.saleId) {
-        setError("Please select the purchase for warranty/repair claim");
-        return;
+        newErrors.saleId = "Please select the purchase for warranty/repair claim";
       }
     }
 
     // Validate Step 2
     if (activeStep === 1) {
       if (!formData.reason) {
-        setError("Please select a reason");
-        return;
+        newErrors.reason = "Please select a reason";
       }
       if (!formData.issueDescription || formData.issueDescription.length < 10) {
-        setError("Please describe the issue in detail (minimum 10 characters)");
-        return;
+        newErrors.issueDescription = "Please describe the issue in detail (minimum 10 characters)";
       }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setShowErrorToast(true);
+      return;
     }
 
     setActiveStep((prev) => prev + 1);
@@ -85,16 +92,25 @@ const NewRMA = () => {
 
   const handleBack = () => {
     setActiveStep((prev) => prev - 1);
-    setError("");
+    setErrors({});
+    setShowErrorToast(false);
   };
 
   const handleFormChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErr = { ...prev };
+        delete newErr[field];
+        return newErr;
+      });
+    }
   };
 
   const handleSubmit = async () => {
     setLoading(true);
-    setError("");
+    setErrors({});
+    setShowErrorToast(false);
 
     try {
       console.log(`📎 Submitting RMA with ${formData.attachments?.length || 0} attachment(s)`);
@@ -112,7 +128,8 @@ const NewRMA = () => {
       setSuccess(`RMA submitted! Number: ${response.data?.rmaNumber || response.data?.rma_number || 'N/A'}`);
       setTimeout(() => navigate("/client/rma/history"), 3000);
     } catch (err) {
-      setError(err.message || "Failed to submit RMA");
+      if (err.errors) setErrors(err.errors);
+      setShowErrorToast(true);
     } finally {
       setLoading(false);
     }
@@ -121,17 +138,18 @@ const NewRMA = () => {
   const getStepContent = (step) => {
     switch (step) {
       case 0:
-        return <RMAFormStep1 formData={formData} onChange={handleFormChange} />;
+        return <RMAFormStep1 formData={formData} onChange={handleFormChange} errors={errors} />;
       case 1:
         return (
           <RMAFormStep2
             formData={formData}
             onChange={handleFormChange}
             rmaType={formData.rmaType}
+            errors={errors}
           />
         );
       case 2:
-        return <RMAFormStep3 formData={formData} rmaType={formData.rmaType} />;
+        return <RMAFormStep3 formData={formData} rmaType={formData.rmaType} onChange={handleFormChange} errors={errors} />;
       default:
         return null;
     }
@@ -144,17 +162,27 @@ const NewRMA = () => {
       </Typography>
 
       <Paper sx={{ p: 4, borderRadius: 4 }}>
-        {error && (
-          <Fade in={!!error}>
-            <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
-          </Fade>
-        )}
+        <Snackbar
+          open={showErrorToast}
+          autoHideDuration={6000}
+          onClose={() => setShowErrorToast(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert onClose={() => setShowErrorToast(false)} severity="error" sx={{ width: '100%', borderRadius: 2, fontWeight: 600, boxShadow: 3 }}>
+            There are validation errors with your submission. Please check the highlighted fields.
+          </Alert>
+        </Snackbar>
 
-        {success && (
-          <Fade in={!!success}>
-            <Alert severity="success" sx={{ mb: 3 }}>{success}</Alert>
-          </Fade>
-        )}
+        <Snackbar
+          open={!!success}
+          autoHideDuration={6000}
+          onClose={() => setSuccess("")}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert onClose={() => setSuccess("")} severity="success" sx={{ width: '100%', borderRadius: 2, fontWeight: 600, boxShadow: 3 }}>
+            {success}
+          </Alert>
+        </Snackbar>
 
         <Stepper activeStep={activeStep} sx={{ pt: 1, pb: 5 }} alternativeLabel>
           {steps.map((label) => (
@@ -178,7 +206,7 @@ const NewRMA = () => {
           <Button
             variant="contained"
             onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
-            disabled={loading}
+            disabled={loading || (activeStep === steps.length - 1 && !formData.policyAgreed)}
           >
             {loading ? "Processing..." :
               activeStep === steps.length - 1 ? "Submit Request" : "Next Step"}

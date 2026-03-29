@@ -1,271 +1,516 @@
-﻿import React, { useState, useEffect } from "react";
-import { Container, Typography, Paper, Box, Button, Grid, CircularProgress, Alert } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import {
+    Container,
+    Typography,
+    Paper,
+    Box,
+    Button,
+    Grid,
+    CircularProgress,
+    Alert,
+    Chip,
+    LinearProgress,
+    Skeleton,
+} from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import {
-  Assignment,
-  People,
-  Inventory,
-  BarChart,
-  Notifications,
-  Settings
+    Assignment,
+    People,
+    Inventory,
+    BarChart,
+    TrendingUp,
+    AccessTime,
+    CheckCircle,
+    ErrorOutline,
+    ArrowForward,
+    Pending,
+    RateReview,
 } from "@mui/icons-material";
 import rmaService from "../../services/api/rmaService";
 import customerService from "../../services/api/customerService";
 import productService from "../../services/api/productService";
 
-const AdminHome = () => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [stats, setStats] = useState({
-    pendingRMAs: 0,
-    underReviewRMAs: 0,
-    totalCustomers: 0,
-    totalProducts: 0,
-    activeNotifications: 0,
-    totalSales: 0
-  });
+const ACCENT = '#6366f1';
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Fetch RMA stats
-        const rmaStatsRes = await rmaService.getDashboardStats();
+const StatCard = ({ icon, label, value, color, gradient, loading, trend }) => (
+    <Paper
+        elevation={0}
+        sx={{
+            p: 3,
+            borderRadius: 3,
+            background: gradient,
+            color: '#fff',
+            position: 'relative',
+            overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.1)',
+            transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+            '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: `0 20px 40px -12px ${color}55`,
+            },
+        }}
+    >
+        {/* Background decoration */}
+        <Box
+            sx={{
+                position: 'absolute',
+                right: -20,
+                top: -20,
+                width: 100,
+                height: 100,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.06)',
+            }}
+        />
+        <Box
+            sx={{
+                position: 'absolute',
+                right: 20,
+                bottom: -30,
+                width: 70,
+                height: 70,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.04)',
+            }}
+        />
 
-        // Fetch customers for total count
-        const customersRes = await customerService.getCustomers({ limit: 1 });
-
-        // Fetch products for total count
-        const productsRes = await productService.getProducts({ limit: 1 });
-
-        // Update stats
-        setStats({
-          pendingRMAs: rmaStatsRes.data?.pending_count || 0,
-          underReviewRMAs: rmaStatsRes.data?.under_review_count || 0,
-          totalCustomers: customersRes.data?.total || 0,
-          totalProducts: productsRes.data?.total || 0,
-          activeNotifications: 0, // Placeholder as no notification service yet
-          totalSales: rmaStatsRes.data?.total_count || 0
-        });
-      } catch (err) {
-        console.error("Error loading dashboard data:", err);
-        setError("Failed to load dashboard statistics. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, []);
-
-  const quickActions = [
-    {
-      icon: <Assignment />,
-      label: "RMA Management",
-      count: stats.pendingRMAs,
-      color: "primary.main",
-      path: "/admin/rma"
-    },
-    {
-      icon: <People />,
-      label: "Manage Customers",
-      count: stats.totalCustomers,
-      color: "secondary.main",
-      path: "/admin/customers"
-    },
-    {
-      icon: <Inventory />,
-      label: "Products",
-      count: stats.totalProducts,
-      color: "success.main",
-      path: "/admin/products"
-    },
-    {
-      icon: <BarChart />,
-      label: "Reports",
-      count: 5,
-      color: "warning.main",
-      path: "/admin/reports"
-    },
-    {
-      icon: <Notifications />,
-      label: "Notifications",
-      count: stats.activeNotifications,
-      color: "info.main",
-      path: "/admin/notifications"
-    },
-    {
-      icon: <Settings />,
-      label: "Settings",
-      count: null,
-      color: "grey.700",
-      path: "/admin/settings"
-    },
-  ];
-
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/login";
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Box>
-            <Typography variant="h4">
-              Admin Dashboard
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Welcome back, {user?.name || "Admin"} ({user?.role?.toUpperCase() || "ADMIN"})
-            </Typography>
-          </Box>
-          <Button variant="outlined" onClick={handleLogout}>
-            Logout
-          </Button>
-        </Box>
-      </Paper>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 4 }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Quick Actions Grid */}
-      <Grid container spacing={3}>
-        {quickActions.map((action, index) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
-            <Paper
-              sx={{
-                p: 3,
-                display: "flex",
-                alignItems: "center",
-                cursor: "pointer",
-                "&:hover": {
-                  boxShadow: 6,
-                  transform: "translateY(-4px)",
-                  transition: "all 0.3s ease"
-                }
-              }}
-              component={RouterLink}
-              to={action.path}
-              style={{ textDecoration: 'none', color: 'inherit' }}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box
+                sx={{
+                    p: 1.2,
+                    borderRadius: 2,
+                    background: 'rgba(255,255,255,0.18)',
+                    display: 'flex',
+                }}
             >
-              <Box sx={{ color: action.color, mr: 2 }}>
-                {React.cloneElement(action.icon, { sx: { fontSize: 40 } })}
-              </Box>
-              <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="h6">{action.label}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {action.count !== null ? `${action.count} items` : "System configuration"}
-                </Typography>
-              </Box>
-              <Button
-                variant="text"
-                sx={{ ml: 2 }}
-                component="span"
-              >
-                View
-              </Button>
+                {React.cloneElement(icon, { sx: { fontSize: 22, color: '#fff' } })}
+            </Box>
+            {trend !== undefined && (
+                <Chip
+                    label={`${trend >= 0 ? '+' : ''}${trend}%`}
+                    size="small"
+                    sx={{
+                        bgcolor: 'rgba(255,255,255,0.2)',
+                        color: '#fff',
+                        fontWeight: 600,
+                        fontSize: 10,
+                        height: 22,
+                    }}
+                />
+            )}
+        </Box>
+
+        {loading ? (
+            <Skeleton variant="text" sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 60, height: 44 }} />
+        ) : (
+            <Typography variant="h3" sx={{ fontWeight: 800, lineHeight: 1, mb: 0.5 }}>
+                {value}
+            </Typography>
+        )}
+        <Typography variant="body2" sx={{ opacity: 0.8, fontWeight: 500 }}>
+            {label}
+        </Typography>
+    </Paper>
+);
+
+const NavCard = ({ icon, label, description, path, color, gradient, badge }) => (
+    <Paper
+        component={RouterLink}
+        to={path}
+        elevation={0}
+        sx={{
+            p: 3,
+            borderRadius: 3,
+            border: '1px solid rgba(0,0,0,0.06)',
+            textDecoration: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1.5,
+            bgcolor: '#fff',
+            transition: 'all 0.25s ease',
+            position: 'relative',
+            overflow: 'hidden',
+            '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
+                borderColor: `${color}44`,
+                '& .nav-arrow': { transform: 'translateX(4px)', opacity: 1 },
+                '& .nav-icon-bg': { background: gradient },
+            },
+        }}
+    >
+        {/* Top color bar */}
+        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: gradient }} />
+
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box
+                className="nav-icon-bg"
+                sx={{
+                    p: 1.3,
+                    borderRadius: 2,
+                    background: `${color}18`,
+                    display: 'flex',
+                    transition: 'background 0.25s ease',
+                }}
+            >
+                {React.cloneElement(icon, { sx: { fontSize: 22, color } })}
+            </Box>
+            {badge !== null && badge !== undefined && (
+                <Chip
+                    label={badge}
+                    size="small"
+                    sx={{
+                        bgcolor: `${color}18`,
+                        color,
+                        fontWeight: 700,
+                        fontSize: 12,
+                        height: 24,
+                        borderRadius: 1.5,
+                    }}
+                />
+            )}
+        </Box>
+
+        <Box sx={{ flex: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0f172a', mb: 0.3 }}>
+                {label}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
+                {description}
+            </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography variant="caption" sx={{ color, fontWeight: 600 }}>
+                Open
+            </Typography>
+            <ArrowForward className="nav-arrow" sx={{ fontSize: 14, color, opacity: 0.6, transition: 'all 0.2s ease' }} />
+        </Box>
+    </Paper>
+);
+
+const AdminHome = () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [stats, setStats] = useState({
+        pendingRMAs: 0,
+        underReviewRMAs: 0,
+        inRepairRMAs: 0,
+        shippedRMAs: 0,
+        approvedRMAs: 0,
+        rejectedRMAs: 0,
+        totalRMAs: 0,
+        totalCustomers: 0,
+        totalProducts: 0,
+    });
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const isAdmin = user && user.role !== 'csr';
+                
+                // Always fetch RMA stats, optionally fetch restricted stats
+                const [rmaStatsRes, customersRes, productsRes] = await Promise.all([
+                    rmaService.getDashboardStats(),
+                    isAdmin ? customerService.getCustomers({ limit: 1 }) : Promise.resolve({ data: { total: 0 } }),
+                    isAdmin ? productService.getProducts({ limit: 1 }) : Promise.resolve({ data: { total: 0 } }),
+                ]);
+
+                setStats({
+                    pendingRMAs: rmaStatsRes.data?.pending || 0,
+                    underReviewRMAs: rmaStatsRes.data?.under_review || 0,
+                    inRepairRMAs: rmaStatsRes.data?.in_repair || 0,
+                    shippedRMAs: rmaStatsRes.data?.shipped || 0,
+                    approvedRMAs: rmaStatsRes.data?.approved || 0,
+                    rejectedRMAs: rmaStatsRes.data?.rejected || 0,
+                    totalRMAs: rmaStatsRes.data?.total || 0,
+                    totalCustomers: customersRes.data?.total || 0,
+                    totalProducts: productsRes.data?.total || 0,
+                });
+            } catch (err) {
+                console.error("Error loading dashboard data:", err);
+                setError("Failed to load dashboard statistics.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
+    const userName = user?.first_name || user?.name || 'Admin';
+    const userRole = user?.role === 'csr' ? 'CSR Agent' : user?.role === 'admin' ? 'Administrator' : 'Staff';
+
+    const kpiCards = [
+        {
+            icon: <Pending />,
+            label: 'Pending RMAs',
+            value: stats.pendingRMAs,
+            color: '#f59e0b',
+            gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        },
+        {
+            icon: <RateReview />,
+            label: 'In Progress',
+            value: stats.underReviewRMAs + stats.inRepairRMAs + stats.shippedRMAs, // Composite total
+            color: '#3b82f6',
+            gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+        },
+        {
+            icon: <CheckCircle />,
+            label: 'Approved',
+            value: stats.approvedRMAs,
+            color: '#10b981',
+            gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+        },
+        {
+            icon: <ErrorOutline />,
+            label: 'Rejected',
+            value: stats.rejectedRMAs,
+            color: '#ef4444',
+            gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+        },
+    ];
+
+    const navCards = [
+        {
+            icon: <Assignment />,
+            label: 'RMA Management',
+            description: 'Review, approve or reject return & warranty requests',
+            path: '/admin/rma',
+            color: ACCENT,
+            gradient: `linear-gradient(135deg, ${ACCENT}, #8b5cf6)`,
+            badge: stats.pendingRMAs || null,
+        },
+        ...(user?.role !== 'csr' ? [
+            {
+                icon: <People />,
+                label: 'Customers',
+                description: 'Manage customer accounts and view profiles',
+                path: '/admin/customers',
+                color: '#0ea5e9',
+                gradient: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                badge: stats.totalCustomers || null,
+            },
+            {
+                icon: <Inventory />,
+                label: 'Products',
+                description: 'Maintain product catalog, pricing and inventory',
+                path: '/admin/products',
+                color: '#10b981',
+                gradient: 'linear-gradient(135deg, #10b981, #059669)',
+                badge: stats.totalProducts || null,
+            },
+            {
+                icon: <BarChart />,
+                label: 'Reports',
+                description: 'Export analytics and performance reports',
+                path: '/admin/reports',
+                color: '#f59e0b',
+                gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                badge: null,
+            },
+        ] : []),
+    ];
+
+    const totalRed = stats.totalRMAs || 1;
+    const resolutionRate = Math.round(((stats.approvedRMAs + stats.rejectedRMAs) / totalRed) * 100);
+    const pendingRate = Math.round((stats.pendingRMAs / totalRed) * 100);
+    const reviewTotal = stats.underReviewRMAs + stats.inRepairRMAs + stats.shippedRMAs;
+    const reviewRate = Math.round((reviewTotal / totalRed) * 100);
+
+    return (
+        <Box>
+            {/* Hero header */}
+            <Paper
+                elevation={0}
+                sx={{
+                    p: { xs: 3, md: 4 },
+                    mb: 3,
+                    borderRadius: 3,
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #312e81 100%)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.04)',
+                }}
+            >
+                {/* decorative circles */}
+                <Box sx={{ position: 'absolute', top: -60, right: -60, width: 220, height: 220, borderRadius: '50%', background: `${ACCENT}18` }} />
+                <Box sx={{ position: 'absolute', bottom: -40, right: 120, width: 140, height: 140, borderRadius: '50%', background: 'rgba(139,92,246,0.1)' }} />
+
+                <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Chip
+                                icon={<AccessTime sx={{ fontSize: '12px !important', color: '#a5f3fc !important' }} />}
+                                label={new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                size="small"
+                                sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: '#a5f3fc', fontSize: 11, borderRadius: 1.5 }}
+                            />
+                            <Chip
+                                label="System Online"
+                                size="small"
+                                sx={{ bgcolor: 'rgba(74,222,128,0.15)', color: '#4ade80', fontSize: 11, borderRadius: 1.5 }}
+                            />
+                        </Box>
+                        <Typography variant="h4" sx={{ color: '#fff', fontWeight: 800, mb: 0.5 }}>
+                            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {userName} 👋
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                            {userRole} · Here's what's happening today
+                        </Typography>
+                    </Box>
+                    <Button
+                        component={RouterLink}
+                        to="/admin/rma"
+                        variant="contained"
+                        endIcon={<ArrowForward />}
+                        sx={{
+                            bgcolor: ACCENT,
+                            '&:hover': { bgcolor: '#4f46e5' },
+                            borderRadius: 2,
+                            fontWeight: 600,
+                            px: 3,
+                            py: 1.2,
+                            boxShadow: `0 4px 16px ${ACCENT}55`,
+                        }}
+                    >
+                        View All RMAs
+                    </Button>
+                </Box>
             </Paper>
-          </Grid>
-        ))}
-      </Grid>
 
-      {/* Recent Activity & Stats */}
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Recent RMA Activity
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Paper sx={{ p: 2, bgcolor: 'warning.light', color: 'warning.contrastText' }}>
-                    <Typography variant="h5" align="center">{stats.pendingRMAs}</Typography>
-                    <Typography variant="body2" align="center">Pending RMAs</Typography>
-                  </Paper>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
+
+            {/* KPI Cards */}
+            <Grid container spacing={2.5} sx={{ mb: 3 }}>
+                {kpiCards.map((card) => (
+                    <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={card.label}>
+                        <StatCard {...card} loading={loading} />
+                    </Grid>
+                ))}
+            </Grid>
+
+            {/* Main content row */}
+            <Grid container spacing={2.5}>
+                {/* Nav cards */}
+                <Grid size={{ xs: 12, md: 8 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#64748b', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11 }}>
+                        Quick Access
+                    </Typography>
+                    <Grid container spacing={2}>
+                        {navCards.map((card) => (
+                            <Grid size={{ xs: 12, sm: 6 }} key={card.label}>
+                                <NavCard {...card} />
+                            </Grid>
+                        ))}
+                    </Grid>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Paper sx={{ p: 2, bgcolor: 'info.light', color: 'info.contrastText' }}>
-                    <Typography variant="h5" align="center">{stats.underReviewRMAs}</Typography>
-                    <Typography variant="body2" align="center">Under Review</Typography>
-                  </Paper>
+
+                {/* Summary panel */}
+                <Grid size={{ xs: 12, md: 4 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#64748b', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11 }}>
+                        RMA Overview
+                    </Typography>
+                    <Paper
+                        elevation={0}
+                        sx={{ borderRadius: 3, border: '1px solid rgba(0,0,0,0.06)', overflow: 'hidden', bgcolor: '#fff' }}
+                    >
+                        {/* Total RMA banner */}
+                        <Box
+                            sx={{
+                                px: 3,
+                                py: 2.5,
+                                background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                            }}
+                        >
+                            <Box>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 10 }}>
+                                    Total RMAs
+                                </Typography>
+                                {loading ? (
+                                    <Skeleton variant="text" sx={{ bgcolor: 'rgba(255,255,255,0.15)', width: 60, height: 40 }} />
+                                ) : (
+                                    <Typography variant="h3" sx={{ color: '#fff', fontWeight: 800, lineHeight: 1 }}>
+                                        {stats.totalRMAs}
+                                    </Typography>
+                                )}
+                            </Box>
+                            <Box
+                                sx={{
+                                    p: 1.5,
+                                    borderRadius: 2,
+                                    background: `${ACCENT}33`,
+                                    border: `1px solid ${ACCENT}44`,
+                                }}
+                            >
+                                <TrendingUp sx={{ color: '#a5b4fc', fontSize: 24 }} />
+                            </Box>
+                        </Box>
+
+                        {/* Breakdown */}
+                        <Box sx={{ p: 3 }}>
+                            {[
+                                { label: 'Pending', value: stats.pendingRMAs, pct: pendingRate, color: '#f59e0b' },
+                                { label: 'In Progress', value: stats.underReviewRMAs + stats.inRepairRMAs + stats.shippedRMAs, pct: reviewRate, color: '#3b82f6' },
+                                { label: 'Resolved', value: stats.approvedRMAs + stats.rejectedRMAs, pct: resolutionRate, color: '#10b981' },
+                            ].map((item) => (
+                                <Box key={item.label} sx={{ mb: 2.5 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.7 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }}>
+                                            {item.label}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 700, color: item.color }}>
+                                                {loading ? '—' : item.value}
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: '#9ca3af' }}>
+                                                {loading ? '' : `${item.pct}%`}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                    <LinearProgress
+                                        variant={loading ? 'indeterminate' : 'determinate'}
+                                        value={item.pct}
+                                        sx={{
+                                            height: 6,
+                                            borderRadius: 3,
+                                            bgcolor: `${item.color}18`,
+                                            '& .MuiLinearProgress-bar': {
+                                                borderRadius: 3,
+                                                bgcolor: item.color,
+                                            },
+                                        }}
+                                    />
+                                </Box>
+                            ))}
+
+                            {user?.role !== 'csr' && (
+                                <Box sx={{ pt: 1, borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ color: '#9ca3af' }}>
+                                        Customers: {loading ? '—' : stats.totalCustomers}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: '#9ca3af' }}>
+                                        Products: {loading ? '—' : stats.totalProducts}
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    </Paper>
                 </Grid>
-              </Grid>
-
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Recent activities and statistics are synchronized with the backend. Click "RMA Management" to view and process all RMAs.
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              System Status
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Total Customers:</Typography>
-                <Typography variant="body2" fontWeight="bold">{stats.totalCustomers}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Active RMAs:</Typography>
-                <Typography variant="body2" fontWeight="bold">{stats.totalSales}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Products:</Typography>
-                <Typography variant="body2" fontWeight="bold">{stats.totalProducts}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">System:</Typography>
-                <Typography variant="body2" fontWeight="bold" color="success.main">Operational</Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-              <Typography variant="caption" color="text.secondary">
-                Last updated: {new Date().toLocaleTimeString()}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Quick Tips */}
-      <Paper sx={{ p: 3, mt: 3, bgcolor: 'info.light', color: 'info.contrastText' }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Quick Tips:
-        </Typography>
-        <Typography variant="body2">
-          • Use the <strong>RMA Management</strong> section to review and process return/warranty requests
-          <br />
-          • Check <strong>Notifications</strong> for pending customer messages
-          <br />
-          • Update <strong>Products</strong> catalog when new items arrive
-          <br />
-          • Generate <strong>Reports</strong> for monthly analytics
-        </Typography>
-      </Paper>
-    </Container>
-  );
+            </Grid>
+        </Box>
+    );
 };
 
 export default AdminHome;

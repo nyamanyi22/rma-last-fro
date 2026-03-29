@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -16,13 +16,14 @@ import {
   CircularProgress,
   Chip,
   Divider,
-  Tooltip
+  Tooltip,
+  FormHelperText
 } from "@mui/material";
 import { InfoOutlined, CheckCircle, Warning } from "@mui/icons-material";
 import productService from "../../../services/api/productService";
 import saleService from "../../../services/api/saleService";
 
-const RMAFormStep1 = ({ formData, onChange }) => {
+const RMAFormStep1 = ({ formData, onChange, errors = {} }) => {
   const [products, setProducts] = useState([]);
   const [userSales, setUserSales] = useState([]);
   const [loading, setLoading] = useState({
@@ -240,7 +241,7 @@ const RMAFormStep1 = ({ formData, onChange }) => {
                 Select Your Purchase
               </Typography>
 
-              <FormControl fullWidth required sx={{ mb: 2 }}>
+              <FormControl fullWidth required sx={{ mb: 2 }} error={!!errors.saleId}>
                 <InputLabel>Choose a purchase</InputLabel>
                 <Select
                   value={formData.saleId}
@@ -277,6 +278,7 @@ const RMAFormStep1 = ({ formData, onChange }) => {
                     );
                   })}
                 </Select>
+                {errors.saleId && <FormHelperText error>{errors.saleId}</FormHelperText>}
               </FormControl>
 
               {loading.sales && <CircularProgress size={24} sx={{ mt: 1 }} />}
@@ -338,7 +340,7 @@ const RMAFormStep1 = ({ formData, onChange }) => {
               Product Information
             </Typography>
 
-            <FormControl fullWidth required sx={{ mb: 2 }}>
+            <FormControl fullWidth required sx={{ mb: 2 }} error={!!errors.productId}>
               <InputLabel>Select Product</InputLabel>
               <Select
                 value={formData.productId}
@@ -360,6 +362,7 @@ const RMAFormStep1 = ({ formData, onChange }) => {
                   </MenuItem>
                 ))}
               </Select>
+              {errors.productId && <FormHelperText error>{errors.productId}</FormHelperText>}
             </FormControl>
 
             {loading.products && <CircularProgress size={24} sx={{ mt: 1 }} />}

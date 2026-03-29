@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -25,8 +25,28 @@ import {
   LocationOn,
   AttachFile
 } from "@mui/icons-material";
+import { FormControlLabel, Checkbox, CircularProgress } from "@mui/material";
+import { rmaApi } from '../../../services/api/api';
 
-const RMAFormStep3 = ({ formData, rmaType }) => {
+const RMAFormStep3 = ({ formData, rmaType, onChange }) => {
+  const [policyText, setPolicyText] = useState("");
+  const [loadingPolicy, setLoadingPolicy] = useState(true);
+
+  useEffect(() => {
+    fetchPolicy();
+  }, []);
+
+  const fetchPolicy = async () => {
+    try {
+      const response = await rmaApi.getReturnPolicy();
+      setPolicyText(response.data.data);
+    } catch (err) {
+      console.error("Failed to fetch policy", err);
+      setPolicyText("Unable to load return policy. Please contact support.");
+    } finally {
+      setLoadingPolicy(false);
+    }
+  };
   const formatDate = (date) => {
     if (!date) return "Not provided";
     return new Date(date).toLocaleDateString('en-US', {
@@ -200,6 +220,32 @@ const RMAFormStep3 = ({ formData, rmaType }) => {
             </Alert>
           </Grid>
         )}
+
+        {/* Return Policy Agreement */}
+        <Grid size={12}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1, mt: 2 }}>
+            Return Policy
+          </Typography>
+          <Paper sx={{ p: 2, maxHeight: 150, overflow: 'auto', bgcolor: '#f8fafc', mb: 2, border: '1px solid #e2e8f0' }}>
+            {loadingPolicy ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}><CircularProgress size={24} /></Box>
+            ) : (
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary' }}>
+                {policyText}
+              </Typography>
+            )}
+          </Paper>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={formData.policyAgreed || false}
+                onChange={(e) => onChange('policyAgreed', e.target.checked)}
+                color="primary"
+              />
+            }
+            label={<Typography variant="body2" sx={{ fontWeight: 600 }}>I have read and agree to the Return Policy</Typography>}
+          />
+        </Grid>
       </Grid>
     </Box>
   );

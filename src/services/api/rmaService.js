@@ -1,5 +1,5 @@
 // Use ONLY this import - remove the other one!
-import { rmaApi } from './api';  // ← Named import (keep this)
+import api, { rmaApi } from './api';  // ← Named import AND default import (for getFileBlob)
 
 class RMAService {
     // =========================
@@ -14,7 +14,7 @@ class RMAService {
         return {
             id: rma.id,
             rmaNumber: rma.rma_number,
-            rma_type: rma.rma_type,
+            rmaType: rma.rma_type,
             typeLabel: this.getTypeLabel(rma.rma_type),
             reason: rma.reason,
             reasonLabel: this.getReasonLabel(rma.reason),
@@ -50,6 +50,7 @@ class RMAService {
             assignedTo: rma.assigned_to,
             adminNotes: rma.admin_notes,
             rejectionReason: rma.rejection_reason,
+            customerMessage: rma.customer_message,
             trackingNumber: rma.tracking_number,
             carrier: rma.carrier,
             shippedAt: rma.shipped_at,
@@ -71,15 +72,18 @@ class RMAService {
             id: attachment.id,
             name: attachment.original_name,
             originalName: attachment.original_name,
-            url: attachment.cloudinary_url,
-            thumbnail: attachment.thumbnail || attachment.thumbnail_url || (attachment.isImage?.() ? attachment.getThumbnailUrl?.(100, 100) : null),
-            preview: attachment.preview || attachment.medium_url || (attachment.isImage?.() ? attachment.getThumbnailUrl?.(800, 600) : null),
-            optimized: attachment.optimized || attachment.optimized_url || (attachment.isImage?.() ? attachment.getOptimizedUrl?.() : null),
+            // Prioritize the 'url' provided by the backend (handles both local and cloudinary)
+            url: attachment.url || attachment.cloudinary_url || attachment.file_url,
+            thumbnail: attachment.thumbnail || attachment.thumbnail_url || attachment.url,
+            preview: attachment.preview || attachment.medium_url || attachment.url,
+            optimized: attachment.optimized || attachment.optimized_url || attachment.url,
             urls: attachment.urls || null,
             size: attachment.file_size,
             formattedSize: attachment.formatted_size,
             mimeType: attachment.mime_type,
-            isImage: attachment.isImage ? attachment.isImage() : attachment.mime_type?.startsWith('image/'),
+            isImage: attachment.isImage !== undefined ?
+                (typeof attachment.isImage === 'function' ? attachment.isImage() : attachment.isImage) :
+                attachment.mime_type?.startsWith('image/'),
             uploadedBy: attachment.uploaded_by,
             uploadedByName: attachment.uploaded_by_name,
             uploadedAt: attachment.created_at,
@@ -102,7 +106,10 @@ class RMAService {
     getTypeLabel(type) {
         const types = {
             'simple_return': 'Simple Return',
-            'warranty_repair': 'Warranty / Repair'
+            'warranty_repair': 'Warranty / Repair',
+            'return': 'Simple Return',
+            'warranty': 'Warranty Claim',
+            'repair': 'Repair'
         };
         return types[type] || type;
     }
@@ -553,6 +560,18 @@ class RMAService {
             }, 100);
 
             return { success: true };
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    /**
+     * Get file blob securely (for authenticated preview)
+     */
+    async getFileBlob(url) {
+        try {
+            const response = await api.get(url, { responseType: 'blob' });
+            return response.data;
         } catch (error) {
             throw this.handleError(error);
         }

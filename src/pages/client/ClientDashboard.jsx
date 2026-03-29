@@ -76,24 +76,24 @@ const ClientDashboard = () => {
 
     const getStatusColor = (status) => {
         const statusMap = {
-            'pending': 'warning',
-            'under_review': 'info',
-            'approved': 'success',
-            'rejected': 'error',
-            'in_repair': 'info',
-            'repaired': 'success',
-            'shipped': 'primary',
-            'delivered': 'success',
-            'completed': 'success',
-            'cancelled': 'default'
+            'pending': '#f59e0b',
+            'under_review': '#3b82f6',
+            'approved': '#10b981',
+            'rejected': '#ef4444',
+            'in_repair': '#8b5cf6',
+            'repaired': '#10b981',
+            'shipped': '#3b82f6',
+            'delivered': '#10b981',
+            'completed': '#10b981',
+            'cancelled': '#6b7280'
         };
-        return statusMap[status] || 'default';
+        return statusMap[status] || '#6b7280';
     };
 
     const getStatusLabel = (status) => {
         const statusMap = {
             'pending': 'Pending',
-            'under_review': 'Under Review',
+            'under_review': 'In Progress',
             'approved': 'Approved',
             'rejected': 'Rejected',
             'in_repair': 'In Repair',
@@ -114,7 +114,7 @@ const ClientDashboard = () => {
     // Stats cards configuration
     const statCards = [
         {
-            title: 'Pending Reviews',
+            title: 'In Progress',
             value: stats.pending,
             icon: <AccessTime sx={{ fontSize: 30 }} />,
             color: 'warning.main',

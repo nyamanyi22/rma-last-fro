@@ -17,6 +17,7 @@ import {
   Stack,
   Fade,
   Paper,
+  Snackbar,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
@@ -360,19 +361,7 @@ const SalesManagement = () => {
           </Stack>
         </Stack>
 
-        {/* Feedback Messages */}
-        <Box>
-          <Fade in={!!successMessage}>
-            <Alert severity="success" sx={{ borderRadius: 3, mb: 2, display: successMessage ? 'flex' : 'none' }}>
-              {successMessage}
-            </Alert>
-          </Fade>
-          <Fade in={!!errorMessage}>
-            <Alert severity="error" sx={{ borderRadius: 3, mb: 2, display: errorMessage ? 'flex' : 'none' }}>
-              {errorMessage}
-            </Alert>
-          </Fade>
-        </Box>
+
 
         {/* Bulk Actions */}
         {selectedIds.length > 0 && (
@@ -505,6 +494,25 @@ const SalesManagement = () => {
           />
         </DialogContent>
       </Dialog>
+
+      <Snackbar
+        open={!!successMessage || !!errorMessage}
+        autoHideDuration={4000}
+        onClose={(e, reason) => {
+          if (reason === 'clickaway') return;
+          setSuccessMessage("");
+          setErrorMessage("");
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => { setSuccessMessage(""); setErrorMessage(""); }} 
+          severity={successMessage ? "success" : "error"} 
+          sx={{ width: '100%', borderRadius: 2, fontWeight: 600 }}
+        >
+          {successMessage || errorMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

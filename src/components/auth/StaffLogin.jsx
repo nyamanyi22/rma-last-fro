@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -104,7 +104,7 @@ const StaffLogin = () => {
                 <strong>Demo Staff Accounts:</strong><br />
                 • CSR: csr@example.com / password<br />
                 • Admin: admin@example.com / password<br />
-                • Super Admin: superadmin@example.com / password
+                • Super Admin: super@example.com / password
               </Typography>
             </Box>
 

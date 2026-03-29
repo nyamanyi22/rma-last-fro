@@ -1,4 +1,4 @@
-﻿import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -17,7 +17,8 @@ import {
   Alert,
   Paper,
   Divider,
-  Chip
+  Chip,
+  FormHelperText
 } from "@mui/material";
 import {
   AttachFile,
@@ -46,7 +47,7 @@ const REASONS = {
   ]
 };
 
-const RMAFormStep2 = ({ formData, onChange, rmaType }) => {
+const RMAFormStep2 = ({ formData, onChange, rmaType, errors = {} }) => {
   const fileInputRef = useRef(null);
   const reasons = REASONS[rmaType] || REASONS.simple_return;
 
@@ -125,7 +126,7 @@ const RMAFormStep2 = ({ formData, onChange, rmaType }) => {
       <Grid container spacing={3}>
         {/* Reason Selection */}
         <Grid size={{ xs: 12 }}>
-          <FormControl fullWidth required>
+          <FormControl fullWidth required error={!!errors.reason}>
             <InputLabel>Reason for {rmaType === 'return' ? 'Return' : rmaType === 'warranty' ? 'Warranty Claim' : 'Repair'}</InputLabel>
             <Select
               value={formData.reason || ""}
@@ -146,6 +147,7 @@ const RMAFormStep2 = ({ formData, onChange, rmaType }) => {
                 </MenuItem>
               ))}
             </Select>
+            {errors.reason && <FormHelperText error>{errors.reason}</FormHelperText>}
           </FormControl>
         </Grid>
 
@@ -159,7 +161,8 @@ const RMAFormStep2 = ({ formData, onChange, rmaType }) => {
             value={formData.issueDescription || ""}
             onChange={(e) => onChange("issueDescription", e.target.value)}
             required
-            helperText={`${formData.issueDescription?.length || 0}/500 characters. Please be detailed.`}
+            error={!!errors.issueDescription}
+            helperText={errors.issueDescription || `${formData.issueDescription?.length || 0}/500 characters. Please be detailed.`}
             inputProps={{ maxLength: 500 }}
           />
         </Grid>

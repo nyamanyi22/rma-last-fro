@@ -126,6 +126,24 @@ class ProductService {
         }
     }
 
+    async importProducts(data) {
+        try {
+            const response = await productApi.importProducts(data);
+            return response.data;
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    async exportProducts(params) {
+        try {
+            const response = await productApi.exportProducts(params);
+            return response; // Return the blob response
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
     handleError(error) {
         console.error('API Error Details:', {
             url: error.config?.url,

@@ -21,7 +21,7 @@ const RMAFilters = ({ filters, onFilterChange, onClearFilters }) => {
   const statusOptions = [
     { value: "all", label: "All Statuses" },
     { value: "pending", label: "Pending" },
-    { value: "under_review", label: "Under Review" },
+    { value: "under_review", label: "In Progress" },
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
     { value: "in_repair", label: "In Repair" },
@@ -31,8 +31,8 @@ const RMAFilters = ({ filters, onFilterChange, onClearFilters }) => {
 
   const typeOptions = [
     { value: "all", label: "All Types" },
-    { value: "return", label: "Simple Return" },
-    { value: "warranty", label: "Warranty/Repair" },
+    { value: "simple_return", label: "Simple Return" },
+    { value: "warranty_repair", label: "Warranty/Repair" },
   ];
 
   const priorityOptions = [

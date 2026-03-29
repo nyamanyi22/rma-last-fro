@@ -14,6 +14,7 @@ import {
     Stack,
     Paper,
     Fade,
+    Snackbar,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import Select from "react-select";
@@ -62,6 +63,7 @@ const FormSection = ({ icon: Icon, title, children }) => (
 );
 
 const CustomerForm = ({ customer, mode, onSave, onCancel, loading, errors: backendErrors = {} }) => {
+    const [showToast, setShowToast] = useState(false);
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -107,6 +109,10 @@ const CustomerForm = ({ customer, mode, onSave, onCancel, loading, errors: backe
 
         return null;
     };
+
+    useEffect(() => {
+        if (Object.keys(backendErrors).length > 0) setShowToast(true);
+    }, [backendErrors]);
 
     useEffect(() => {
         if (customer && mode === "edit") {
@@ -188,7 +194,9 @@ const CustomerForm = ({ customer, mode, onSave, onCancel, loading, errors: backe
         }
 
         setLocalErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        const isValid = Object.keys(newErrors).length === 0;
+        if (!isValid) setShowToast(true);
+        return isValid;
     };
 
     const handleSubmit = (e) => {
@@ -216,6 +224,16 @@ const CustomerForm = ({ customer, mode, onSave, onCancel, loading, errors: backe
 
     return (
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+            <Snackbar
+                open={showToast}
+                autoHideDuration={6000}
+                onClose={() => setShowToast(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setShowToast(false)} severity="error" sx={{ width: '100%', borderRadius: 2, fontWeight: 600, boxShadow: 3 }}>
+                    There are validation errors with your submission. Please check the highlighted fields.
+                </Alert>
+            </Snackbar>
             <FormSection icon={AssignmentIndOutlined} title="Identity & Security">
                 <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField

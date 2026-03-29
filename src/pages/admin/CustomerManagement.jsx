@@ -17,6 +17,7 @@ import {
     Paper,
     Stack,
     Fade,
+    Snackbar,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
@@ -24,6 +25,7 @@ import {
     PersonAdd,
     Refresh,
     FileDownloadOutlined,
+    FileUploadOutlined,
     PeopleAltOutlined,
     HowToRegOutlined,
     PersonAddOutlined,
@@ -34,6 +36,7 @@ import {
 import CustomerTable from "../../components/admin/customer-management/CustomerTable";
 import CustomerForm from "../../components/admin/customer-management/CustomerForm";
 import CustomerDetails from "../../components/admin/customer-management/CustomerDetails";
+import ImportCustomers from "../../components/admin/customer-management/ImportCustomers";
 import CustomerService from "../../services/api/customerService";
 
 const GlassCard = ({ title, value, icon: Icon, color }) => (
@@ -68,6 +71,7 @@ const CustomerManagement = () => {
     const [customers, setCustomers] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [dialogMode, setDialogMode] = useState("create");
     const [loading, setLoading] = useState(false);
@@ -289,22 +293,33 @@ const CustomerManagement = () => {
                             Manage your customer relationships and account access.
                         </Typography>
                     </Box>
-                    <Button
-                        variant="contained"
-                        size="large"
-                        startIcon={<PersonAdd />}
-                        onClick={handleCreateCustomer}
-                        sx={{
-                            borderRadius: 3,
-                            px: 4,
-                            py: 1.5,
-                            fontWeight: 700,
-                            textTransform: 'none',
-                            boxShadow: '0 8px 16px -4px rgba(25, 118, 210, 0.3)'
-                        }}
-                    >
-                        Add New Customer
-                    </Button>
+                    <Stack direction="row" spacing={2}>
+                        <Button
+                            variant="outlined"
+                            size="large"
+                            startIcon={<FileUploadOutlined />}
+                            onClick={() => setImportDialogOpen(true)}
+                            sx={{ borderRadius: 3, px: 3, fontWeight: 700, textTransform: 'none' }}
+                        >
+                            Batch Import
+                        </Button>
+                        <Button
+                            variant="contained"
+                            size="large"
+                            startIcon={<PersonAdd />}
+                            onClick={handleCreateCustomer}
+                            sx={{
+                                borderRadius: 3,
+                                px: 4,
+                                py: 1.5,
+                                fontWeight: 700,
+                                textTransform: 'none',
+                                boxShadow: '0 8px 16px -4px rgba(25, 118, 210, 0.3)'
+                            }}
+                        >
+                            Add New Customer
+                        </Button>
+                    </Stack>
                 </Stack>
 
                 {/* Stats Grid */}
@@ -382,19 +397,7 @@ const CustomerManagement = () => {
                     </Stack>
                 </Stack>
 
-                {/* Feedback Messages */}
-                <Box>
-                    <Fade in={!!successMessage}>
-                        <Alert severity="success" sx={{ borderRadius: 3, mb: 2, display: successMessage ? 'flex' : 'none' }} onClose={() => setSuccessMessage("")}>
-                            {successMessage}
-                        </Alert>
-                    </Fade>
-                    <Fade in={!!errorMessage}>
-                        <Alert severity="error" sx={{ borderRadius: 3, mb: 2, display: errorMessage ? 'flex' : 'none' }} onClose={() => setErrorMessage("")}>
-                            {errorMessage}
-                        </Alert>
-                    </Fade>
-                </Box>
+
 
                 {/* Bulk Selection Bar */}
                 {selectedIds.length > 0 && (
@@ -494,6 +497,48 @@ const CustomerManagement = () => {
                     />
                 </DialogContent>
             </Dialog>
+
+            <Dialog
+                open={importDialogOpen}
+                onClose={() => setImportDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                TransitionComponent={Fade}
+                PaperProps={{ sx: { borderRadius: 4, backgroundImage: 'none' } }}
+            >
+                <DialogTitle sx={{ p: 4, pb: 2 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 800 }}>Import Customer Archive</Typography>
+                </DialogTitle>
+                <DialogContent sx={{ p: 4, pt: 0 }}>
+                    <ImportCustomers
+                        onImportComplete={() => {
+                            setImportDialogOpen(false);
+                            loadCustomers();
+                            showSuccess("Member database synchronized successfully");
+                        }}
+                        onCancel={() => setImportDialogOpen(false)}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            <Snackbar
+                open={!!successMessage || !!errorMessage}
+                autoHideDuration={4000}
+                onClose={(e, reason) => {
+                    if (reason === 'clickaway') return;
+                    setSuccessMessage("");
+                    setErrorMessage("");
+                }}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert 
+                    onClose={() => { setSuccessMessage(""); setErrorMessage(""); }} 
+                    severity={successMessage ? "success" : "error"} 
+                    sx={{ width: '100%', borderRadius: 2, fontWeight: 600 }}
+                >
+                    {successMessage || errorMessage}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 };

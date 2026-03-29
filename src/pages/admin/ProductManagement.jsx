@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Container,
   Paper,
@@ -22,6 +22,7 @@ import {
   MenuItem,
   Fade,
   Stack,
+  Snackbar,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
@@ -40,6 +41,7 @@ import {
 } from "@mui/icons-material";
 import ProductTable from "../../components/admin/product-management/ProductTable";
 import ProductForm from "../../components/admin/product-management/ProductForm";
+import ImportProducts from "../../components/admin/product-management/ImportProducts";
 import ProductService from "../../services/api/productService";
 
 const GlassCard = ({ children, bgcolor, icon: Icon, label, value, color }) => (
@@ -107,12 +109,14 @@ const ProductManagement = () => {
   const [categories, setCategories] = useState(["all"]);
   const [brands, setBrands] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [dialogMode, setDialogMode] = useState("create");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
+  const [formErrors, setFormErrors] = useState({});
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -203,12 +207,14 @@ const ProductManagement = () => {
 
   const handleCreateProduct = () => {
     setSelectedProduct(null);
+    setFormErrors({});
     setDialogMode("create");
     setDialogOpen(true);
   };
 
   const handleEditProduct = (product) => {
     setSelectedProduct(product);
+    setFormErrors({});
     setDialogMode("edit");
     setDialogOpen(true);
   };
@@ -263,6 +269,7 @@ const ProductManagement = () => {
       loadProducts();
       loadFilters();
     } catch (err) {
+      if (err.errors) setFormErrors(err.errors);
       setErrorMessage(err.message || `Failed to ${dialogMode} product`);
     } finally {
       setLoading(false);
@@ -270,30 +277,26 @@ const ProductManagement = () => {
     }
   };
 
-  const handleExport = () => {
-    const csvContent = [
-      ["SKU", "Name", "Category", "Brand", "Price", "Warranty", "Stock", "Status"],
-      ...products.map(p => [
-        p.sku,
-        p.name,
-        p.category,
-        p.brand,
-        `$${p.price}`,
-        `${p.defaultWarrantyMonths} months`,
-        p.stockQuantity,
-        p.isActive ? "Active" : "Inactive",
-      ]),
-    ]
-      .map(row => row.join(","))
-      .join("\n");
+  const handleExport = async () => {
+    try {
+      const params = {
+        search: searchQuery,
+        category: selectedCategory !== "all" ? selectedCategory : undefined,
+        is_active: selectedStatus !== "all" ? (selectedStatus === "active") : undefined,
+      };
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `products_export_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+      const response = await ProductService.exportProducts(params);
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `products_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setErrorMessage(err.message || "Failed to export products");
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -340,22 +343,39 @@ const ProductManagement = () => {
             Manage your store's catalog and monitor stock levels
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<Add />}
-          onClick={handleCreateProduct}
-          sx={{
-            py: 1.5, px: 4,
-            borderRadius: 3,
-            textTransform: 'none',
-            fontSize: '1.05rem',
-            fontWeight: 700,
-            boxShadow: '0 8px 16px -4px rgba(25, 118, 210, 0.3)',
-          }}
-        >
-          New Product
-        </Button>
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="outlined"
+            size="large"
+            startIcon={<Download />}
+            onClick={() => setImportDialogOpen(true)}
+            sx={{
+              py: 1.5, px: 3,
+              borderRadius: 3,
+              textTransform: 'none',
+              fontSize: '1.05rem',
+              fontWeight: 700,
+            }}
+          >
+            Batch Import
+          </Button>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<Add />}
+            onClick={handleCreateProduct}
+            sx={{
+              py: 1.5, px: 4,
+              borderRadius: 3,
+              textTransform: 'none',
+              fontSize: '1.05rem',
+              fontWeight: 700,
+              boxShadow: '0 8px 16px -4px rgba(25, 118, 210, 0.3)',
+            }}
+          >
+            New Product
+          </Button>
+        </Stack>
       </Box>
 
       {/* Stats Dashboard */}
@@ -472,13 +492,7 @@ const ProductManagement = () => {
           </Box>
         </Stack>
 
-        {/* Notifications */}
-        <Fade in={!!successMessage || !!errorMessage}>
-          <Box sx={{ mb: 3 }}>
-            {successMessage && <Alert severity="success" sx={{ borderRadius: 2 }}>{successMessage}</Alert>}
-            {errorMessage && <Alert severity="error" sx={{ borderRadius: 2 }}>{errorMessage}</Alert>}
-          </Box>
-        </Fade>
+
 
         {/* Bulk Actions */}
         {selectedIds.length > 0 && (
@@ -594,9 +608,58 @@ const ProductManagement = () => {
             loading={loading}
             categories={categories.filter(c => c !== "all")}
             brands={brands}
+            errors={formErrors}
           />
         </DialogContent>
       </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{
+          sx: { borderRadius: 5, p: 2 }
+        }}
+      >
+        <DialogTitle sx={{ px: 4, pt: 3, pb: 1 }}>
+          <Typography variant="h4" sx={{ fontWeight: 900 }}>
+            Batch Import Catalog
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ px: 4, pb: 4 }}>
+          <ImportProducts
+            onImportComplete={() => {
+              setImportDialogOpen(false);
+              setSuccessMessage("Batch import operation accomplished");
+              loadProducts();
+              loadFilters();
+            }}
+            onCancel={() => setImportDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Snackbar
+        open={!!successMessage || !!errorMessage}
+        autoHideDuration={4000}
+        onClose={(e, reason) => {
+          if (reason === 'clickaway') return;
+          setSuccessMessage("");
+          setErrorMessage("");
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => { setSuccessMessage(""); setErrorMessage(""); }}
+          severity={successMessage ? "success" : "error"}
+          sx={{ width: '100%', borderRadius: 2, fontWeight: 600 }}
+        >
+          {successMessage || errorMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

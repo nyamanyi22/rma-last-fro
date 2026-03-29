@@ -1,8 +1,10 @@
 
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api`;
+
 const api = axios.create({
-    baseURL: 'http://127.0.0.1:8000/api',
+    baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -114,6 +116,8 @@ export const productApi = {
     bulkUpdateStatus: (ids, isActive) => api.post('/admin/products/bulk-status', { ids, is_active: isActive }),
     getCategories: () => api.get('/admin/products/categories'),
     getBrands: () => api.get('/admin/products/brands'),
+    importProducts: (data) => api.post('/admin/products/import', data),
+    exportProducts: (params) => api.get('/admin/products/export', { params, responseType: 'blob' }),
 };
 
 // ==================== SALES ENDPOINTS ====================
@@ -153,6 +157,7 @@ export const customerApi = {
     deleteCustomer: (id) => api.delete(`/admin/customers/${id}`),
     bulkDeleteCustomers: (ids) => api.post('/admin/customers/bulk-delete', { ids }),
     bulkUpdateStatus: (ids, isActive) => api.post('/admin/customers/bulk-status', { ids, is_active: isActive }),
+    importCustomers: (data) => api.post('/admin/customers/import', data),
     exportCustomers: (params) => api.get('/admin/customers/export', { params, responseType: 'blob' }),
 };
 
@@ -239,8 +244,14 @@ export const rmaApi = {
      * Download attachment (by ID) - opens in new tab
      * GET /customer/rma/attachments/{id}/download
      */
+    /**
+     * Download attachment (by ID) - This legacy method is now deprecated for protected files.
+     * Use downloadAttachmentAsBlob instead to ensure token is sent.
+     */
     downloadAttachment: (id) => {
-        window.open(`/api/customer/rma/attachments/${id}/download`, '_blank');
+        const token = localStorage.getItem('token');
+        const url = `${api.defaults.baseURL}/customer/rma/attachments/${id}/download?token=${token}`;
+        window.open(url, '_blank');
     },
 
     /**
@@ -321,7 +332,9 @@ export const rmaApi = {
      * GET /admin/rma/attachments/{id}/download
      */
     downloadAdminAttachment: (id) => {
-        window.open(`/api/admin/rma/attachments/${id}/download`, '_blank');
+        const token = localStorage.getItem('token');
+        const url = `${api.defaults.baseURL}/admin/rma/attachments/${id}/download?token=${token}`;
+        window.open(url, '_blank');
     },
 
     /**
@@ -375,6 +388,13 @@ export const rmaApi = {
      * PUT /admin/rma/{id}/shipping
      */
     updateShipping: (id, data) => api.put(`/admin/rma/${id}/shipping`, data),
+
+    // =========================
+    // RETURN POLICY ENDPOINTS
+    // =========================
+    getReturnPolicy: () => api.get('/customer/return-policy'),
+    getAdminReturnPolicy: () => api.get('/super-admin/settings/return-policy'),
+    updateReturnPolicy: (data) => api.post('/super-admin/settings/return-policy', data),
 };
 
 // ==================== SUPER ADMIN ENDPOINTS ====================
@@ -387,6 +407,11 @@ export const superAdminApi = {
     createStaff: (data)   => api.post('/super-admin/staff', data),
     updateStaff: (id, data) => api.put(`/super-admin/staff/${id}`, data),
     deleteStaff: (id)     => api.delete(`/super-admin/staff/${id}`),
+
+    // System Settings
+    getSettings: () => api.get('/super-admin/settings'),
+    updateSettings: (data) => api.post('/super-admin/settings', data),
+    getSystemInfo: () => api.get('/super-admin/system-info'),
 };
 
 export default api;

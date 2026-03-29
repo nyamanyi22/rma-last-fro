@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import {
   Table,
   TableBody,
@@ -106,10 +106,13 @@ const RMAList = ({ rmas, onViewDetails, onReview, userRole }) => {
   };
 
   const getTypeChip = (type) => {
-    const isReturn = type === "return";
+    const isReturn = type === "simple_return" || type === "return";
+    const isWarranty = type === "warranty_repair" || type === "warranty";
+    const label = isReturn ? "Simple Return" : (isWarranty ? "Warranty / Repair" : type);
+
     return (
       <Chip
-        label={isReturn ? "Return" : "Warranty"}
+        label={label}
         size="small"
         sx={{
           backgroundColor: isReturn ? "#E8EAF6" : "#F3E5F5",
