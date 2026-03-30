@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Typography, Box, Grid, TextField, Button, Avatar, Alert, CircularProgress, Chip } from '@mui/material';
+import { Paper, Typography, Box, Grid, TextField, Button, Avatar, Alert, CircularProgress, Chip, Snackbar } from '@mui/material';
 import Select from "react-select";
 import countries_list from "country-list";
 import { getCode } from 'country-list';
@@ -17,6 +17,7 @@ const AdminProfile = () => {
     const [initialLoading, setInitialLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [user, setUser] = useState({});
     const [formData, setFormData] = useState({
         firstName: '',
@@ -75,6 +76,11 @@ const AdminProfile = () => {
         fetchUserData();
     }, []);
 
+    const handleSnackbarClose = (event, reason) => {
+        if (reason === 'clickaway') return;
+        setSnackbarOpen(false);
+    };
+
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -92,6 +98,7 @@ const AdminProfile = () => {
             const response = await authService.updateProfile(formData);
             setUser(response.user);
             setSuccess('Profile updated successfully!');
+            setSnackbarOpen(true);
             
             // Update local storage name immediately for layout sync
             const updatedLocalUser = { ...JSON.parse(localStorage.getItem('user')), ...response.user };
@@ -286,6 +293,16 @@ const AdminProfile = () => {
                     </Paper>
                 </Grid>
             </Grid>
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={4000}
+                onClose={handleSnackbarClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: '100%', borderRadius: 2, fontWeight: 600 }}>
+                    Admin profile updated successfully!
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

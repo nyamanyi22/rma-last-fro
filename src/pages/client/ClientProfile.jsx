@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Typography, Box, Grid, TextField, Button, Avatar, Alert, CircularProgress } from '@mui/material';
+import { Paper, Typography, Box, Grid, TextField, Button, Avatar, Alert, CircularProgress, Snackbar } from '@mui/material';
 import Select from "react-select";
 import countries_list from "country-list";
 import { getCode } from 'country-list';
@@ -17,6 +17,7 @@ const ClientProfile = () => {
     const [initialLoading, setInitialLoading] = useState(true); // ✅ Added for initial load
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [user, setUser] = useState({});
     const [formData, setFormData] = useState({
         firstName: '',
@@ -78,6 +79,11 @@ const ClientProfile = () => {
         fetchUserData();
     }, []);
 
+    const handleSnackbarClose = (event, reason) => {
+        if (reason === 'clickaway') return;
+        setSnackbarOpen(false);
+    };
+
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -96,6 +102,7 @@ const ClientProfile = () => {
             const response = await authService.updateProfile(formData);
             setUser(response.user);
             setSuccess('Profile updated successfully!');
+            setSnackbarOpen(true);
 
             setTimeout(() => {
                 navigate('/client');
@@ -285,6 +292,16 @@ const ClientProfile = () => {
                     </Paper>
                 </Grid>
             </Grid>
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={4000}
+                onClose={handleSnackbarClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: '100%', borderRadius: 2, fontWeight: 600 }}>
+                    Profile updated successfully!
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

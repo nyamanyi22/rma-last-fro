@@ -212,6 +212,7 @@ const AdminHome = () => {
         totalCustomers: 0,
         totalProducts: 0,
     });
+    const [recentRmas, setRecentRmas] = useState([]);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -238,6 +239,12 @@ const AdminHome = () => {
                     totalCustomers: customersRes.data?.total || 0,
                     totalProducts: productsRes.data?.total || 0,
                 });
+
+                // Fetch recent RMAs
+                const recentRes = await rmaService.getRmas({ per_page: 5 });
+                if (recentRes.success) {
+                    setRecentRmas(recentRes.data);
+                }
             } catch (err) {
                 console.error("Error loading dashboard data:", err);
                 setError("Failed to load dashboard statistics.");
@@ -408,18 +415,87 @@ const AdminHome = () => {
 
             {/* Main content row */}
             <Grid container spacing={2.5}>
-                {/* Nav cards */}
+                {/* Recent Activity & Nav cards */}
                 <Grid size={{ xs: 12, md: 8 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#64748b', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11 }}>
                         Quick Access
                     </Typography>
-                    <Grid container spacing={2}>
+                    <Grid container spacing={2} sx={{ mb: 4 }}>
                         {navCards.map((card) => (
                             <Grid size={{ xs: 12, sm: 6 }} key={card.label}>
                                 <NavCard {...card} />
                             </Grid>
                         ))}
                     </Grid>
+
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#64748b', mb: 1.5, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11 }}>
+                        Recent Activity
+                    </Typography>
+                    <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid rgba(0,0,0,0.06)', overflow: 'hidden', mb: 3 }}>
+                        <Box sx={{ overflowX: 'auto' }}>
+                            <Box sx={{ minWidth: 600 }}>
+                                {loading ? (
+                                    <Box sx={{ p: 4, textAlign: 'center' }}>
+                                        <CircularProgress size={30} />
+                                    </Box>
+                                ) : recentRmas.length > 0 ? (
+                                    <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <Box component="thead" sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                                            <Box component="tr">
+                                                <Box component="th" sx={{ px: 3, py: 2, textAlign: 'left', fontSize: 11, color: '#64748b', fontWeight: 600 }}>RMA #</Box>
+                                                <Box component="th" sx={{ px: 3, py: 2, textAlign: 'left', fontSize: 11, color: '#64748b', fontWeight: 600 }}>CUSTOMER</Box>
+                                                <Box component="th" sx={{ px: 3, py: 2, textAlign: 'left', fontSize: 11, color: '#64748b', fontWeight: 600 }}>STATUS</Box>
+                                                <Box component="th" sx={{ px: 3, py: 2, textAlign: 'right', fontSize: 11, color: '#64748b', fontWeight: 600 }}>ACTION</Box>
+                                            </Box>
+                                        </Box>
+                                        <Box component="tbody">
+                                            {recentRmas.map((rma) => (
+                                                <Box component="tr" key={rma.id} sx={{ borderBottom: '1px solid #f1f5f9', '&:hover': { bgcolor: '#fbfcfd' } }}>
+                                                    <Box component="td" sx={{ px: 3, py: 2.5 }}>
+                                                        <Typography variant="subtitle2" sx={{ color: ACCENT, fontWeight: 700 }}>{rma.rmaNumber}</Typography>
+                                                        <Typography variant="caption" color="text.secondary">{rma.formattedDate}</Typography>
+                                                    </Box>
+                                                    <Box component="td" sx={{ px: 3, py: 2.5 }}>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{rma.contactName}</Typography>
+                                                        <Typography variant="caption" color="text.secondary">{rma.contactEmail}</Typography>
+                                                    </Box>
+                                                    <Box component="td" sx={{ px: 3, py: 2.5 }}>
+                                                        <Chip 
+                                                            label={rma.statusLabel} 
+                                                            size="small" 
+                                                            sx={{ 
+                                                                bgcolor: `${rma.statusColor}15`, 
+                                                                color: rma.statusColor, 
+                                                                fontWeight: 700,
+                                                                fontSize: 10,
+                                                                borderRadius: 1.5,
+                                                                height: 24
+                                                            }} 
+                                                        />
+                                                    </Box>
+                                                    <Box component="td" sx={{ px: 3, py: 2.5, textAlign: 'right' }}>
+                                                        <Button 
+                                                            component={RouterLink} 
+                                                            to={`/admin/rma?id=${rma.id}`} 
+                                                            variant="text" 
+                                                            size="small"
+                                                            sx={{ color: '#64748b', textTransform: 'none', fontWeight: 600 }}
+                                                        >
+                                                            Manage
+                                                        </Button>
+                                                    </Box>
+                                                </Box>
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ p: 6, textAlign: 'center' }}>
+                                        <Typography variant="body2" color="text.secondary">No recent activity</Typography>
+                                    </Box>
+                                )}
+                            </Box>
+                        </Box>
+                    </Paper>
                 </Grid>
 
                 {/* Summary panel */}
@@ -474,7 +550,7 @@ const AdminHome = () => {
                                 </Box>
                             ) : stats.totalRMAs > 0 ? (
                                 <>
-                                    <Box sx={{ height: 220, width: '100%', mb: 2 }}>
+                                    <Box sx={{ height: 300, width: '100%', mb: 3 }}>
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
@@ -488,8 +564,8 @@ const AdminHome = () => {
                                                     ].filter(d => d.value > 0)}
                                                     cx="50%"
                                                     cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={80}
+                                                    innerRadius={75}
+                                                    outerRadius={105}
                                                     paddingAngle={5}
                                                     dataKey="value"
                                                 >
@@ -511,18 +587,22 @@ const AdminHome = () => {
                                         </ResponsiveContainer>
                                     </Box>
 
-                                    <Grid container spacing={1}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: 1, px: 1 }}>
                                         {[
                                             { label: 'Pending', value: stats.pendingRMAs, color: '#f59e0b' },
                                             { label: 'Processing', value: stats.underReviewRMAs + stats.inRepairRMAs + stats.shippedRMAs, color: '#3b82f6' },
                                             { label: 'Resolved', value: stats.approvedRMAs + stats.rejectedRMAs, color: '#10b981' },
                                         ].map((item) => (
-                                            <Grid key={item.label} size={4} sx={{ textAlign: 'center' }}>
-                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block' }}>{item.label}</Typography>
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: item.color }}>{item.value}</Typography>
-                                            </Grid>
+                                            <Box key={item.label} sx={{ textAlign: 'center' }}>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', fontSize: 11 }}>
+                                                    {item.label}
+                                                </Typography>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: item.color, fontSize: 16 }}>
+                                                    {item.value}
+                                                </Typography>
+                                            </Box>
                                         ))}
-                                    </Grid>
+                                    </Box>
                                 </>
                             ) : (
                                 <Box sx={{ py: 6, textAlign: 'center' }}>

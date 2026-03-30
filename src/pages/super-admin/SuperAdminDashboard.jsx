@@ -10,7 +10,15 @@ import {
     CircularProgress,
     Alert,
     Skeleton,
+    Divider,
 } from '@mui/material';
+import {
+    PieChart,
+    Pie,
+    Cell,
+    ResponsiveContainer,
+    Tooltip as ChartTooltip,
+} from 'recharts';
 import {
     People,
     AdminPanelSettings,
@@ -171,13 +179,13 @@ const SuperAdminDashboard = () => {
                 ))}
             </Grid>
 
-            {/* Bottom row */}
-            <Grid container spacing={3}>
+            {/* Middle row: Staff & RMA Charts */}
+            <Grid container spacing={3} sx={{ mb: 4 }}>
                 {/* Staff breakdown */}
-                <Grid size={{ xs: 12, md: 8 }}>
+                <Grid size={{ xs: 12, md: 7 }}>
                     <Paper sx={{ p: 4, borderRadius: 4, height: '100%', border: '1px solid #edf2f7', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
                         <Typography variant="h6" sx={{ mb: 4, fontWeight: 700, color: '#1e293b' }}>
-                            Staff Overview
+                            Staff Distribution
                         </Typography>
                         <Grid container spacing={2}>
                             {[
@@ -225,25 +233,94 @@ const SuperAdminDashboard = () => {
                     </Paper>
                 </Grid>
 
-                {/* System status */}
-                <Grid size={{ xs: 12, md: 4 }}>
-                    <Paper sx={{ p: 3, borderRadius: 4, height: '100%' }}>
-                        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                            System Status
+                {/* RMA Distribution Chart */}
+                <Grid size={{ xs: 12, md: 5 }}>
+                    <Paper sx={{ p: 4, borderRadius: 4, height: '100%', border: '1px solid #edf2f7', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                        <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, color: '#1e293b' }}>
+                            RMA Distribution
                         </Typography>
-                        {['Database', 'API', 'Storage', 'Email Service'].map((service) => (
-                            <Box key={service} sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'space-between' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>{service}</Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main', mr: 1 }} />
-                                    <Typography variant="caption" color="success.main">Operational</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 3 }}>
+                            Global status breakdown
+                        </Typography>
+
+                        <Box sx={{ height: 260, width: '100%' }}>
+                            {loading ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                    <CircularProgress size={30} />
+                                </Box>
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                { name: 'Pending', value: overview?.rmas?.pending || 0, color: '#f59e0b' },
+                                                { name: 'In Progress', value: overview?.rmas?.in_progress || 0, color: '#3b82f6' },
+                                                { name: 'Completed', value: overview?.rmas?.completed || 0, color: '#10b981' },
+                                            ].filter(d => d.value > 0)}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={90}
+                                            paddingAngle={8}
+                                            dataKey="value"
+                                        >
+                                            {[
+                                                { name: 'Pending', color: '#f59e0b' },
+                                                { name: 'In Progress', color: '#3b82f6' },
+                                                { name: 'Completed', color: '#10b981' },
+                                            ].map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <ChartTooltip
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </Box>
+
+                        <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 3 }}>
+                            {[
+                                { label: 'Pending', color: '#f59e0b' },
+                                { label: 'In Progress', color: '#3b82f6' },
+                                { label: 'Completed', color: '#10b981' },
+                            ].map((item) => (
+                                <Box key={item.label} sx={{ textAlign: 'center' }}>
+                                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: item.color, mx: 'auto', mb: 0.5 }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                        {item.label}
+                                    </Typography>
+                                </Box>
+                            ))}
+                        </Box>
+                    </Paper>
+                </Grid>
+            </Grid>
+
+            {/* Bottom Row: System Status and Activity */}
+            <Grid container spacing={3}>
+                <Grid size={{ xs: 12 }}>
+                    <Paper sx={{ p: 3, borderRadius: 4, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', gap: 4 }}>
+                            <Box>
+                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: '#1e293b' }}>System Status</Typography>
+                                <Box sx={{ display: 'flex', gap: 3 }}>
+                                    {['Database', 'API', 'Storage'].map((service) => (
+                                        <Box key={service} sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main', mr: 1 }} />
+                                            <Typography variant="body2" sx={{ fontWeight: 500 }}>{service}</Typography>
+                                        </Box>
+                                    ))}
                                 </Box>
                             </Box>
-                        ))}
-
-                        <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #e2e8f0' }}>
-                            <Typography variant="caption" color="text.secondary">
+                        </Box>
+                        <Box sx={{ textAlign: 'right' }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                 Last refreshed: {new Date().toLocaleTimeString()}
+                            </Typography>
+                            <Typography variant="caption" color="primary" sx={{ cursor: 'pointer', fontWeight: 600 }} onClick={fetchOverview}>
+                                Force Refresh
                             </Typography>
                         </Box>
                     </Paper>

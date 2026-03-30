@@ -11,15 +11,16 @@ import {
 import rmaService from '../../services/api/rmaService';
 
 const STATUS_COLORS = {
-    pending: '#ff9800',
-    under_review: '#89b3d6ff',
-    approved: '#4caf50',
-    rejected: '#f44336',
-    in_repair: '#9c27b0',
-    ready_for_shipment: '#00bcd4',
-    shipped: '#3f51b5',
-    completed: '#4caf50'
+    pending: '#f59e0b',
+    under_review: '#0ea5e9',
+    approved: '#10b981',
+    rejected: '#ef4444',
+    in_repair: '#8b5cf6',
+    ready_for_shipment: '#6366f1',
+    shipped: '#6366f1',
+    completed: '#10b981'
 };
+const ACCENT = '#6366f1';
 
 const RMAReports = () => {
     const [loading, setLoading] = useState(true);
@@ -178,16 +179,16 @@ const RMAReports = () => {
                 {/* Status Breakdown Pie Chart */}
                 <Grid size={{ xs: 12, md: 4 }}>
                     <Paper sx={{ p: 4, borderRadius: 4, boxShadow: '0 8px 30px rgba(0,0,0,0.04)', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" mb={2} sx={{ fontWeight: 600, color: '#333' }}>Current Status Distribution</Typography>
-                        <Box sx={{ flexGrow: 1, minHeight: 300 }}>
-                            <ResponsiveContainer width="120%" height="120%">
+                        <Typography variant="h6" mb={2} sx={{ fontWeight: 700, color: '#1e293b' }}>Status distribution</Typography>
+                        <Box sx={{ flexGrow: 1, minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
                                         data={status_breakdown}
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={70}
-                                        outerRadius={100}
+                                        innerRadius={80}
+                                        outerRadius={110}
                                         paddingAngle={5}
                                         dataKey="value"
                                         stroke="none"
@@ -201,7 +202,7 @@ const RMAReports = () => {
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                                         itemStyle={{ fontWeight: 600 }}
                                     />
-                                    <Legend iconType="circle" layout="horizontal" verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '13px' }} />
+                                    <Legend iconType="circle" layout="horizontal" verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: 600 }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </Box>

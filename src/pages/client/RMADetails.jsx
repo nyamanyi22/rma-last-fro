@@ -48,6 +48,7 @@ import {
     Visibility,
     Close,
     InsertDriveFileOutlined,
+    Verified,
 } from '@mui/icons-material';
 import { Timeline, TimelineItem, TimelineSeparator, TimelineConnector, TimelineContent, TimelineDot } from '@mui/lab';
 import rmaService from '../../services/api/rmaService';
@@ -321,23 +322,69 @@ const RMADetails = () => {
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <Typography variant="body2" color="text.secondary" gutterBottom>Product</Typography>
-                                <Typography variant="body1" fontWeight="bold">{rma.productName || 'N/A'}</Typography>
-                                {rma.warrantyStatus && rma.requiresWarrantyCheck && (
-                                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Chip label={rma.warrantyStatus?.text || 'Check Pending'} size="small" color={rma.warrantyStatus?.color || 'warning'} />
-                                    </Box>
-                                )}
+                                <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }}>{rma.productName || 'N/A'}</Typography>
+                                <Typography variant="caption" color="text.secondary">ID: {rma.product?.id || '—'}</Typography>
                             </Grid>
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <Typography variant="body2" color="text.secondary" gutterBottom>Serial Number</Typography>
-                                <Typography variant="body1" fontWeight="bold" sx={{ fontFamily: 'monospace', mb: 1 }}>{rma.serialNumber || 'Not provided'}</Typography>
-                                {rma.warrantyExpiryDate && rma.requiresWarrantyCheck && (
-                                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                         <CalendarToday fontSize="small" /> Valid Until: {rma.formattedExpiryDate || formatDate(rma.warrantyExpiryDate)}
-                                     </Typography>
-                                )}
+                                <Typography variant="body1" fontWeight="bold" sx={{ fontFamily: 'monospace', bgcolor: 'grey.50', px: 1, py: 0.5, borderRadius: 1, border: '1px solid #e2e8f0', display: 'inline-block' }}>
+                                    {rma.serialNumber || 'Not provided'}
+                                </Typography>
                             </Grid>
-                            <Grid size={12}><Divider sx={{ my: 2 }} /></Grid>
+
+                            {/* Warranty Block */}
+                            {(rma.requiresWarrantyCheck || rma.warrantyExpiryDate) && (
+                                <Grid size={12}>
+                                    <Box sx={{ 
+                                        mt: 2, 
+                                        p: 2, 
+                                        borderRadius: 3, 
+                                        bgcolor: alpha(rma.warrantyStatus?.color === 'success' ? '#10b981' : rma.warrantyStatus?.color === 'error' ? '#ef4444' : '#f59e0b', 0.04),
+                                        border: '1px solid',
+                                        borderColor: alpha(rma.warrantyStatus?.color === 'success' ? '#10b981' : rma.warrantyStatus?.color === 'error' ? '#ef4444' : '#f59e0b', 0.15),
+                                    }}>
+                                        <Typography variant="overline" sx={{ fontWeight: 800, color: 'text.secondary', display: 'block', mb: 1.5, letterSpacing: 1 }}>
+                                            Warranty Information
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <Box sx={{ 
+                                                        p: 1, 
+                                                        borderRadius: 1.5, 
+                                                        bgcolor: rma.warrantyStatus?.color === 'success' ? 'success.main' : rma.warrantyStatus?.color === 'error' ? 'error.main' : 'warning.main',
+                                                        color: 'white',
+                                                        display: 'flex'
+                                                    }}>
+                                                        <Verified sx={{ fontSize: 18 }} />
+                                                    </Box>
+                                                    <Box>
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1, mb: 0.5 }}>Status</Typography>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                                            {rma.warrantyStatus?.text || 'Pending Verification'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </Grid>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: 'grey.200', color: 'grey.700', display: 'flex' }}>
+                                                        <CalendarToday sx={{ fontSize: 18 }} />
+                                                    </Box>
+                                                    <Box>
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1, mb: 0.5 }}>Coverage Expiry</Typography>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                                            {rma.warrantyExpiryDate ? formatDate(rma.warrantyExpiryDate) : 'Not Checked'}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </Grid>
+                                        </Grid>
+                                    </Box>
+                                </Grid>
+                            )}
+
+                            <Grid size={12}><Divider sx={{ my: 1 }} /></Grid>
                             <Grid size={12}>
                                 <Typography variant="body2" color="text.secondary" gutterBottom>Issue Description</Typography>
                                 <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, borderStyle: 'dashed' }}>
@@ -353,13 +400,55 @@ const RMADetails = () => {
                             {rma.trackingNumber && (
                                 <Grid size={12}>
                                     <Divider sx={{ my: 2 }} />
-                                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: alpha('#6366f1', 0.05), border: '1px solid', borderColor: alpha('#6366f1', 0.2), display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        <LocalShipping sx={{ color: 'primary.main', fontSize: 32 }} />
-                                        <Box>
-                                            <Typography variant="overline" sx={{ fontWeight: 800, color: 'primary.main', display: 'block', lineHeight: 1 }}>Logistics Information</Typography>
-                                            <Typography variant="body1" sx={{ fontWeight: 700 }}>{rma.carrier}: {rma.trackingNumber}</Typography>
-                                            <Typography variant="caption" color="text.secondary">Use this number to track your shipment on the carrier's website.</Typography>
+                                    <Box sx={{
+                                        p: 3,
+                                        borderRadius: 4,
+                                        bgcolor: alpha('#6366f1', 0.05),
+                                        border: '1px solid',
+                                        borderColor: alpha('#6366f1', 0.2),
+                                        display: 'flex',
+                                        flexDirection: { xs: 'column', sm: 'row' },
+                                        alignItems: { xs: 'flex-start', sm: 'center' },
+                                        justifyContent: 'space-between',
+                                        gap: 2
+                                    }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+                                                <LocalShipping />
+                                            </Avatar>
+                                            <Box>
+                                                <Typography variant="overline" sx={{ fontWeight: 800, color: 'primary.main', display: 'block', lineHeight: 1 }}>Logistics Information</Typography>
+                                                <Typography variant="h6" sx={{ fontWeight: 800 }}>{rma.carrier}: {rma.trackingNumber}</Typography>
+                                                <Typography variant="caption" color="text.secondary">Use this number to track your shipment on the carrier's website.</Typography>
+                                            </Box>
                                         </Box>
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            startIcon={<Visibility />}
+                                            onClick={() => {
+                                                const carrier = rma.carrier?.toLowerCase();
+                                                const track = rma.trackingNumber;
+                                                let url = `https://www.google.com/search?q=track+${rma.carrier}+${track}`;
+                                                
+                                                if (carrier.includes('fedex')) url = `https://www.fedex.com/apps/fedextrack/?tracknumbers=${track}`;
+                                                else if (carrier.includes('ups')) url = `https://www.ups.com/track?tracknum=${track}`;
+                                                else if (carrier.includes('usps')) url = `https://tools.usps.com/go/TrackConfirmAction?tLabels=${track}`;
+                                                else if (carrier.includes('dhl')) url = `https://www.dhl.com/en/express/tracking.html?AWB=${track}`;
+                                                
+                                                window.open(url, '_blank');
+                                            }}
+                                            sx={{
+                                                borderRadius: 3,
+                                                px: 3,
+                                                py: 1,
+                                                fontWeight: 700,
+                                                textTransform: 'none',
+                                                boxShadow: '0 4px 12px rgba(99,102,241,0.2)'
+                                            }}
+                                        >
+                                            Track Package
+                                        </Button>
                                     </Box>
                                 </Grid>
                             )}
@@ -569,7 +658,7 @@ const RMADetails = () => {
                                     <Typography variant="body2" color="text.secondary">Fetching secure preview...</Typography>
                                 </Box>
                             ) : previewFile.localUrl ? (
-                                previewFile.mime_type === 'application/pdf' ? (
+                                previewFile.mimeType === 'application/pdf' ? (
                                     <object data={previewFile.localUrl} type="application/pdf" width="100%" height="100%" title="PDF Preview">
                                         <Typography p={4} align="center">Failed to load PDF. Please download the file to view it.</Typography>
                                     </object>

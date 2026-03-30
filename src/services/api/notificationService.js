@@ -6,7 +6,7 @@ const notificationService = {
      */
     async getUnreadNotifications(limit = 20) {
         try {
-            const response = await api.get(`/notifications?limit=${limit}`);
+            const response = await api.get(`/admin/notifications?limit=${limit}`);
             return response.data;
         } catch (error) {
             console.error('Failed to fetch unread notifications', error);
@@ -19,7 +19,7 @@ const notificationService = {
      */
     async getAllNotifications(page = 1, limit = 50) {
         try {
-            const response = await api.get(`/notifications/all?page=${page}&limit=${limit}`);
+            const response = await api.get(`/admin/notifications/all?page=${page}&limit=${limit}`);
             return response.data;
         } catch (error) {
             console.error('Failed to fetch all notifications', error);
@@ -32,7 +32,7 @@ const notificationService = {
      */
     async getUnreadCount() {
         try {
-            const response = await api.get('/notifications/unread-count');
+            const response = await api.get('/admin/notifications/unread-count');
             return response.data.count || 0;
         } catch (error) {
             console.error('Failed to fetch notification count', error);
@@ -45,7 +45,7 @@ const notificationService = {
      */
     async markAsRead(id) {
         try {
-            const response = await api.post(`/notifications/${id}/read`);
+            const response = await api.post(`/admin/notifications/${id}/read`);
             return response.data;
         } catch (error) {
             console.error('Failed to mark notification as read', error);
@@ -58,7 +58,7 @@ const notificationService = {
      */
     async markAllRead() {
         try {
-            const response = await api.post('/notifications/mark-all-read');
+            const response = await api.post('/admin/notifications/mark-all-read');
             return response.data;
         } catch (error) {
             console.error('Failed to mark all notifications as read', error);
@@ -71,7 +71,7 @@ const notificationService = {
      */
     async deleteNotification(id) {
         try {
-            const response = await api.delete(`/notifications/${id}`);
+            const response = await api.delete(`/admin/notifications/${id}`);
             return response.data;
         } catch (error) {
             console.error('Failed to delete notification', error);
@@ -84,7 +84,7 @@ const notificationService = {
      */
     async clearAll() {
         try {
-            const response = await api.delete('/notifications/clear-all');
+            const response = await api.delete('/admin/notifications/clear-all');
             return response.data;
         } catch (error) {
             console.error('Failed to clear all notifications', error);

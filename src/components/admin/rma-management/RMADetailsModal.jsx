@@ -43,7 +43,15 @@ import {
   DoneAll,
 } from "@mui/icons-material";
 import rmaService from "../../../services/api/rmaService";
-import { History, Description, AccountCircle } from "@mui/icons-material";
+import { 
+  History, 
+  Description, 
+  AccountCircle, 
+  Verified, 
+  CalendarToday 
+} from "@mui/icons-material";
+
+const ACCENT = '#6366f1';
 
 const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus, onRefresh }) => {
   const [activeTab, setActiveTab] = useState(0);
@@ -162,6 +170,16 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus, onRefresh }) => {
     return colors[status] || "#120f0fff";
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   return (
     <Dialog
       open={open}
@@ -239,6 +257,44 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus, onRefresh }) => {
                 </Typography>
                 <Typography variant="body2"><strong>Asset:</strong> {rma.productName}</Typography>
                 <Typography variant="body2"><strong>Serial:</strong> {rma.serialNumber || 'N/A'}</Typography>
+                
+                {/* Warranty Information Block */}
+                {(rma.requiresWarrantyCheck || rma.warrantyExpiryDate) && (
+                  <Box sx={{ 
+                    mt: 2, 
+                    p: 1.5, 
+                    borderRadius: 2, 
+                    bgcolor: alpha(rma.warrantyStatus?.color === 'success' ? '#10b981' : rma.warrantyStatus?.color === 'error' ? '#ef4444' : '#f59e0b', 0.05),
+                    border: '1px solid',
+                    borderColor: alpha(rma.warrantyStatus?.color === 'success' ? '#10b981' : rma.warrantyStatus?.color === 'error' ? '#ef4444' : '#f59e0b', 0.1),
+                  }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', display: 'block', mb: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Warranty Status
+                    </Typography>
+                    <Grid container spacing={1}>
+                      <Grid item xs={6}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Verified sx={{ 
+                            fontSize: 16, 
+                            color: rma.warrantyStatus?.color === 'success' ? 'success.main' : rma.warrantyStatus?.color === 'error' ? 'error.main' : 'warning.main' 
+                          }} />
+                          <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>
+                            {rma.warrantyStatus?.text || 'Check Pending'}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                          <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                            {rma.warrantyExpiryDate ? formatDate(rma.warrantyExpiryDate) : 'Not Checked'}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+
                 {rma.trackingNumber && (
                   <>
                     <Divider sx={{ my: 1, borderStyle: 'dotted' }} />
@@ -563,23 +619,77 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus, onRefresh }) => {
       </Dialog>
 
       {/* Attachment Preview Overlay */}
-      <Dialog open={!!previewFile} onClose={handlePreviewClose} maxWidth="md" fullWidth>
-        <DialogTitle component="div" sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>{previewFile?.name || "Preview"}</Typography>
-          <IconButton onClick={handlePreviewClose}><Close /></IconButton>
+      <Dialog 
+        open={!!previewFile} 
+        onClose={handlePreviewClose} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}
+      >
+        <DialogTitle component="div" sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 2, px: 3, borderBottom: '1px solid #f1f5f9' }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: '#1e293b' }}>
+            {previewFile?.name || "Preview"}
+          </Typography>
+          <IconButton 
+            onClick={handlePreviewClose}
+            sx={{ bgcolor: 'rgba(0,0,0,0.05)', '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' } }}
+          >
+            <Close />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ p: 0, height: '60vh', bgcolor: '#f1f5f9', display: 'flex', justifyContent: 'center' }}>
-          {previewLoading ? <CircularProgress sx={{ m: 'auto' }} /> : (
-            previewFile?.localUrl && (
-              previewFile.mimeType === 'application/pdf' ?
-                <object data={previewFile.localUrl} type="application/pdf" width="100%" height="100%" /> :
-                <img src={previewFile.localUrl} style={{ maxWidth: '100%', objectFit: 'contain' }} alt="Preview" />
+        <DialogContent sx={{ p: 0, height: '65vh', bgcolor: '#e2e8f0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {previewLoading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <CircularProgress size={40} sx={{ color: ACCENT }} />
+              <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>Fetching secure preview...</Typography>
+            </Box>
+          ) : (
+            previewFile?.localUrl ? (
+              previewFile.mimeType === 'application/pdf' ? (
+                <object data={previewFile.localUrl} type="application/pdf" width="100%" height="100%" title="PDF Preview">
+                  <Box sx={{ p: 4, textAlign: 'center' }}>
+                    <Typography color="error" sx={{ fontWeight: 600 }}>Failed to load PDF preview.</Typography>
+                    <Typography variant="body2" color="text.secondary">Please download the file to view it.</Typography>
+                  </Box>
+                </object>
+              ) : previewFile.isImage ? (
+                <img src={previewFile.localUrl} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} alt="Preview" />
+              ) : (
+                <Box sx={{ p: 6, textAlign: 'center' }}>
+                  <Typography variant="h6" color="text.secondary" gutterBottom>Preview not available</Typography>
+                  <Typography variant="body2" color="text.secondary">Please download this file type to view its contents.</Typography>
+                </Box>
+              )
+            ) : (
+              <Typography color="text.secondary">No preview data available</Typography>
             )
           )}
         </DialogContent>
-        <DialogActions>
-          <Button startIcon={<Download />} href={previewFile?.localUrl} download={previewFile?.name}>Download</Button>
-          <Button onClick={handlePreviewClose}>Close</Button>
+        <DialogActions sx={{ p: 2.5, backgroundColor: '#f8fafc', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
+          <Button 
+            onClick={handlePreviewClose} 
+            sx={{ fontWeight: 700, px: 3, textTransform: 'none', color: '#64748b' }}
+          >
+            Close
+          </Button>
+          <Button 
+            variant="contained"
+            startIcon={<Download />}
+            href={previewFile?.localUrl} 
+            download={previewFile?.name}
+            sx={{ 
+              borderRadius: 2, 
+              fontWeight: 700, 
+              px: 4, 
+              py: 1, 
+              textTransform: 'none',
+              bgcolor: ACCENT,
+              boxShadow: `0 4px 14px ${ACCENT}33`,
+              '&:hover': { bgcolor: '#4f46e5', boxShadow: `0 6px 20px ${ACCENT}44` }
+            }}
+          >
+            Download File
+          </Button>
         </DialogActions>
       </Dialog>
     </Dialog>

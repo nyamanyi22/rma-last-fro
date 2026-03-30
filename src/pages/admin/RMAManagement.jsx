@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
     Paper,
     Typography,
@@ -74,6 +75,7 @@ const RMAManagement = () => {
     const [stats, setStats] = useState({ pending: 0, under_review: 0, in_repair: 0, shipped: 0, approved: 0, rejected: 0, total: 0 });
     const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
     const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+    const [searchParams, setSearchParams] = useSearchParams();
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     const fetchStats = async () => {
@@ -97,12 +99,14 @@ const RMAManagement = () => {
             };
             const response = await rmaService.getRmas(params);
             if (response.success) {
-                setRmaList(response.data.data);
-                setPagination({
-                    current_page: response.data.current_page,
-                    last_page: response.data.last_page,
-                    total: response.data.total,
-                });
+                setRmaList(response.data); // data is already the mapped array
+                if (response.pagination) {
+                    setPagination({
+                        current_page: response.pagination.current_page,
+                        last_page: response.pagination.last_page,
+                        total: response.pagination.total,
+                    });
+                }
             }
         } catch (error) {
             console.error("Error fetching RMAs:", error);
@@ -114,6 +118,14 @@ const RMAManagement = () => {
     useEffect(() => {
         fetchStats();
         fetchRmas(1);
+        
+        // Auto-open detail if id is in search params
+        const rmaId = searchParams.get('id');
+        if (rmaId) {
+            handleViewDetails({ id: rmaId });
+            // Clear param after opening so it doesn't reopen if we navigate away/back
+            setSearchParams({}, { replace: true });
+        }
     }, [filters, searchQuery]);
 
     const handleTabChange = (event, newValue) => {

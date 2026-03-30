@@ -407,6 +407,34 @@ class RMAService {
     }
 
     /**
+     * Get RMAs with filters (admin)
+     */
+    async getRmas(params = {}) {
+        try {
+            const response = await rmaApi.getRmas(params);
+            if (response.data?.success) {
+                // Handle Laravel pagination structure if present
+                const data = response.data.data;
+                const rmaList = Array.isArray(data) ? data : (data?.data || []);
+                
+                return {
+                    success: true,
+                    data: this.mapRmas(rmaList),
+                    pagination: !Array.isArray(data) ? {
+                        current_page: data.current_page,
+                        last_page: data.last_page,
+                        total: data.total,
+                        per_page: data.per_page
+                    } : null
+                };
+            }
+            return response.data;
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    /**
      * Add comment to RMA (admin)
      */
     async addComment(id, comment, type = 'internal') {
@@ -438,6 +466,49 @@ class RMAService {
                 };
             }
             return response.data;
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    /**
+     * Get dashboard overview metrics (admin)
+     */
+    async getDashboardOverview() {
+        try {
+            const response = await rmaApi.getDashboardOverview();
+            if (response.data?.success) {
+                return {
+                    success: true,
+                    data: response.data.data
+                };
+            }
+            return response.data;
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    /**
+     * Export RMAs to CSV/Excel (admin)
+     */
+    async exportRmas(params = {}) {
+        try {
+            const response = await rmaApi.exportRmas(params);
+            
+            // Handle blob response
+            const blob = new Blob([response.data], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const date = new Date().toISOString().split('T')[0];
+            
+            link.href = url;
+            link.setAttribute('download', `rma_report_${date}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            
+            return { success: true };
         } catch (error) {
             throw this.handleError(error);
         }
