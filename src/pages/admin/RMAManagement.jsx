@@ -146,6 +146,15 @@ const RMAManagement = () => {
         }
     };
 
+    const refreshRma = async (id) => {
+        try {
+            const response = await rmaService.getRmaAdmin(id);
+            if (response.success) setSelectedRma(response.data);
+        } catch (error) {
+            console.error("Error refreshing RMA:", error);
+        }
+    };
+
     const handleUpdateStatus = async (rmaId, newStatus, notesOrData = "", rejectionReason = null) => {
         setLoading(true);
         try {
@@ -164,7 +173,7 @@ const RMAManagement = () => {
             if (response.success) {
                 fetchStats();
                 fetchRmas(pagination.current_page);
-                setDetailsModalOpen(false);
+                refreshRma(rmaId); // Refresh the modal data too
                 setToast({
                     open: true,
                     message: `RMA ${response.data.rmaNumber || rmaId} updated to ${newStatus.replace('_', ' ')}`,
@@ -392,6 +401,7 @@ const RMAManagement = () => {
                     onClose={() => setDetailsModalOpen(false)}
                     rma={selectedRma}
                     onUpdateStatus={handleUpdateStatus}
+                    onRefresh={() => refreshRma(selectedRma.id)}
                 />
             )}
 

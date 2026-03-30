@@ -29,6 +29,14 @@ import {
 import rmaService from "../../services/api/rmaService";
 import customerService from "../../services/api/customerService";
 import productService from "../../services/api/productService";
+import {
+    PieChart,
+    Pie,
+    Cell,
+    ResponsiveContainer,
+    Tooltip as ChartTooltip,
+    Legend as ChartLegend
+} from 'recharts';
 
 const ACCENT = '#6366f1';
 
@@ -211,7 +219,7 @@ const AdminHome = () => {
             setError(null);
             try {
                 const isAdmin = user && user.role !== 'csr';
-                
+
                 // Always fetch RMA stats, optionally fetch restricted stats
                 const [rmaStatsRes, customersRes, productsRes] = await Promise.all([
                     rmaService.getDashboardStats(),
@@ -460,48 +468,75 @@ const AdminHome = () => {
 
                         {/* Breakdown */}
                         <Box sx={{ p: 3 }}>
-                            {[
-                                { label: 'Pending', value: stats.pendingRMAs, pct: pendingRate, color: '#f59e0b' },
-                                { label: 'In Progress', value: stats.underReviewRMAs + stats.inRepairRMAs + stats.shippedRMAs, pct: reviewRate, color: '#3b82f6' },
-                                { label: 'Resolved', value: stats.approvedRMAs + stats.rejectedRMAs, pct: resolutionRate, color: '#10b981' },
-                            ].map((item) => (
-                                <Box key={item.label} sx={{ mb: 2.5 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.7 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#374151' }}>
-                                            {item.label}
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 700, color: item.color }}>
-                                                {loading ? '—' : item.value}
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: '#9ca3af' }}>
-                                                {loading ? '' : `${item.pct}%`}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                    <LinearProgress
-                                        variant={loading ? 'indeterminate' : 'determinate'}
-                                        value={item.pct}
-                                        sx={{
-                                            height: 6,
-                                            borderRadius: 3,
-                                            bgcolor: `${item.color}18`,
-                                            '& .MuiLinearProgress-bar': {
-                                                borderRadius: 3,
-                                                bgcolor: item.color,
-                                            },
-                                        }}
-                                    />
+                            {loading ? (
+                                <Box sx={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <CircularProgress size={30} />
                                 </Box>
-                            ))}
+                            ) : stats.totalRMAs > 0 ? (
+                                <>
+                                    <Box sx={{ height: 220, width: '100%', mb: 2 }}>
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={[
+                                                        { name: 'Pending', value: stats.pendingRMAs, color: '#f59e0b' },
+                                                        { name: 'Under Review', value: stats.underReviewRMAs, color: '#0ea5e9' },
+                                                        { name: 'In Repair', value: stats.inRepairRMAs, color: '#8b5cf6' },
+                                                        { name: 'Approved', value: stats.approvedRMAs, color: '#10b981' },
+                                                        { name: 'Shipped', value: stats.shippedRMAs, color: '#6366f1' },
+                                                        { name: 'Rejected', value: stats.rejectedRMAs, color: '#ef4444' },
+                                                    ].filter(d => d.value > 0)}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={80}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                >
+                                                    {[
+                                                        { name: 'Pending', color: '#f59e0b' },
+                                                        { name: 'Under Review', color: '#0ea5e9' },
+                                                        { name: 'In Repair', color: '#8b5cf6' },
+                                                        { name: 'Approved', color: '#10b981' },
+                                                        { name: 'Shipped', color: '#6366f1' },
+                                                        { name: 'Rejected', color: '#ef4444' },
+                                                    ].map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                                    ))}
+                                                </Pie>
+                                                <ChartTooltip
+                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </Box>
+
+                                    <Grid container spacing={1}>
+                                        {[
+                                            { label: 'Pending', value: stats.pendingRMAs, color: '#f59e0b' },
+                                            { label: 'Processing', value: stats.underReviewRMAs + stats.inRepairRMAs + stats.shippedRMAs, color: '#3b82f6' },
+                                            { label: 'Resolved', value: stats.approvedRMAs + stats.rejectedRMAs, color: '#10b981' },
+                                        ].map((item) => (
+                                            <Grid key={item.label} size={4} sx={{ textAlign: 'center' }}>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block' }}>{item.label}</Typography>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: item.color }}>{item.value}</Typography>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+                                </>
+                            ) : (
+                                <Box sx={{ py: 6, textAlign: 'center' }}>
+                                    <Typography variant="body2" color="text.secondary">No RMA data available</Typography>
+                                </Box>
+                            )}
 
                             {user?.role !== 'csr' && (
-                                <Box sx={{ pt: 1, borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="caption" sx={{ color: '#9ca3af' }}>
-                                        Customers: {loading ? '—' : stats.totalCustomers}
+                                <Box sx={{ pt: 2, mt: 2, borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 500 }}>
+                                        Customers: <strong>{loading ? '—' : stats.totalCustomers}</strong>
                                     </Typography>
-                                    <Typography variant="caption" sx={{ color: '#9ca3af' }}>
-                                        Products: {loading ? '—' : stats.totalProducts}
+                                    <Typography variant="caption" sx={{ color: '#9ca3af', fontWeight: 500 }}>
+                                        Products: <strong>{loading ? '—' : stats.totalProducts}</strong>
                                     </Typography>
                                 </Box>
                             )}

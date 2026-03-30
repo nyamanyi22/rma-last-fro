@@ -14,12 +14,14 @@ import {
   Tab,
   Table,
   TableBody,
+  TableHead,
   TableCell,
   TableRow,
   TextField,
   IconButton,
   CircularProgress,
   MenuItem,
+  Divider,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
@@ -41,19 +43,28 @@ import {
   DoneAll,
 } from "@mui/icons-material";
 import rmaService from "../../../services/api/rmaService";
+import { History, Description, AccountCircle } from "@mui/icons-material";
 
-const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
+const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus, onRefresh }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [internalComment, setInternalComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  // Auth context
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isStaff = ["csr", "admin", "super_admin"].includes(user.role);
+
   // Rejection States
   const [isConfirmingReject, setIsConfirmingReject] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectionCategory, setRejectionCategory] = useState("");
   const [rejectionDetail, setRejectionDetail] = useState("");
+
+  // Shipping state
+  const [shippingCarrier, setShippingCarrier] = useState(rma.carrier || "");
+  const [trackingNumber, setTrackingNumber] = useState(rma.trackingNumber || "");
 
   if (!rma) return null;
 
@@ -85,7 +96,7 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
         const response = await rmaService.addComment(rma.id, internalComment, 'internal');
         if (response.success) {
           setInternalComment("");
-          alert("Internal note added successfully");
+          if (onRefresh) onRefresh();
         }
       } catch (error) {
         console.error("Error adding comment:", error);
@@ -107,6 +118,21 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
     setIsRejecting(false);
     setRejectionCategory("");
     setRejectionDetail("");
+  };
+
+  const handleUpdateShipping = async () => {
+    setSubmitting(true);
+    try {
+      const response = await rmaService.updateShipping(rma.id, shippingCarrier, trackingNumber);
+      if (response.success) {
+        if (onRefresh) onRefresh();
+        setActiveTab(0); // Go back to overview
+      }
+    } catch (error) {
+      console.error("Error updating shipping:", error);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getRejectionOptions = () => {
@@ -181,7 +207,8 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
         <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
           <Tab label="Entity Overview" sx={{ fontWeight: 700, textTransform: 'none' }} />
           <Tab label={`Documentation (${rma.attachments?.length || 0})`} sx={{ fontWeight: 700, textTransform: 'none' }} />
-          <Tab label="Audit Logistics" sx={{ fontWeight: 700, textTransform: 'none' }} />
+          {isStaff && <Tab label="Audit Logistics" sx={{ fontWeight: 700, textTransform: 'none' }} />}
+          {isStaff && <Tab label="Shipping Info" sx={{ fontWeight: 700, textTransform: 'none' }} />}
         </Tabs>
 
         {activeTab === 0 && (
@@ -212,6 +239,13 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
                 </Typography>
                 <Typography variant="body2"><strong>Asset:</strong> {rma.productName}</Typography>
                 <Typography variant="body2"><strong>Serial:</strong> {rma.serialNumber || 'N/A'}</Typography>
+                {rma.trackingNumber && (
+                  <>
+                    <Divider sx={{ my: 1, borderStyle: 'dotted' }} />
+                    <Typography variant="body2"><strong>Carrier:</strong> {rma.carrier}</Typography>
+                    <Typography variant="body2"><strong>Tracking:</strong> {rma.trackingNumber}</Typography>
+                  </>
+                )}
               </Paper>
             </Grid>
             <Grid item xs={12}>
@@ -240,28 +274,164 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
             ))}
           </Grid>
         )}
+
+        {isStaff && activeTab === 2 && (
+          <Grid container spacing={3}>
+            {/* Status History */}
+            <Grid item xs={12} lg={7}>
+              <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <History fontSize="small" /> Status Change History
+                </Typography>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ '& th': { fontWeight: 700, color: 'text.secondary', borderBottom: '2px solid', borderColor: 'divider' } }}>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Transition</TableCell>
+                      <TableCell>Authorized By</TableCell>
+                      <TableCell>Notes</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rma.statusHistory?.length > 0 ? (
+                      rma.statusHistory.map((history) => (
+                        <TableRow key={history.id} sx={{ '& td': { borderBottom: '1px solid', borderColor: alpha('#000', 0.05) } }}>
+                          <TableCell sx={{ whiteSpace: 'nowrap', py: 1.5 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 600 }}>{history.formattedDate}</Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>{history.oldStatusLabel}</Typography>
+                              <PlayArrow sx={{ fontSize: 10, color: 'text.disabled' }} />
+                              <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700 }}>{history.newStatusLabel}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ py: 1.5 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700 }}>{history.changedByName}</Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1.5 }}>
+                            <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>{history.notes || '—'}</Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                          <Typography variant="caption" color="text.disabled">No history records found.</Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </Paper>
+            </Grid>
+
+            {/* Internal Staff Notes */}
+            <Grid item xs={12} lg={5}>
+              <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Description fontSize="small" /> Internal Operational Notes
+                </Typography>
+
+                <Box sx={{ flexGrow: 1, overflowY: 'auto', mb: 2, maxHeight: 300, pr: 1 }}>
+                  {(rma.comments?.filter(c => String(c.type).toLowerCase() === 'internal') || []).length > 0 ? (
+                    rma.comments
+                      .filter(c => String(c.type).toLowerCase() === 'internal')
+                      .map((note) => (
+                    <Box key={note.id} sx={{ mb: 2, p: 1.5, bgcolor: alpha('#f5f5f5', 0.5), borderRadius: 2, borderLeft: '3px solid', borderColor: 'primary.main' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <AccountCircle sx={{ fontSize: 14 }} /> {note.userName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">{note.formattedDate}</Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap' }}>{note.comment}</Typography>
+                    </Box>
+                  ))) : (
+                    <Box sx={{ py: 4, textAlign: 'center' }}>
+                      <Typography variant="caption" color="text.disabled">No internal notes yet.</Typography>
+                    </Box>
+                  )}
+                </Box>
+
+                <Divider sx={{ mb: 2 }} />
+                <Box>
+                  <TextField
+                    multiline
+                    fullWidth
+                    rows={2}
+                    placeholder="Type new operational note..."
+                    value={internalComment}
+                    onChange={(e) => setInternalComment(e.target.value)}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: alpha('#fff', 0.5) } }}
+                  />
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={handleAddInternalNote}
+                    disabled={!internalComment.trim() || submitting}
+                    sx={{ mt: 1, borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
+                  >
+                    {submitting ? <CircularProgress size={20} /> : 'Post Private Note'}
+                  </Button>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+        )}
+
+        {activeTab === 3 && isStaff && (
+          <Box sx={{ p: 4, textAlign: 'center', maxWidth: 600, mx: 'auto' }}>
+            <Paper sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider', bgcolor: alpha('#f8fafc', 0.5) }}>
+              <LocalShipping sx={{ fontSize: 48, color: 'primary.main', mb: 2, opacity: 0.8 }} />
+              <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>Update Logistics Tracking</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+                Enter the shipping carrier and tracking number below. Saving this will automatically mark the RMA as **Shipped** and notify the customer.
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Shipping Carrier"
+                    placeholder="e.g., FedEx, UPS, DHL"
+                    value={shippingCarrier}
+                    onChange={(e) => setShippingCarrier(e.target.value)}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Tracking Number"
+                    placeholder="Enter tracking ID"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                  />
+                </Grid>
+              </Grid>
+
+              <Button
+                variant="contained"
+                fullWidth
+                size="large"
+                startIcon={<LocalShipping />}
+                onClick={handleUpdateShipping}
+                disabled={submitting || !shippingCarrier || !trackingNumber}
+                sx={{ mt: 4, borderRadius: 3, py: 1.5, fontWeight: 800, textTransform: 'none', boxShadow: 3 }}
+              >
+                {submitting ? <CircularProgress size={24} /> : 'Save & Mark as Shipped'}
+              </Button>
+            </Paper>
+          </Box>
+        )}
       </DialogContent>
 
       <DialogActions sx={{ p: 3, pt: 0, gap: 1 }}>
         {!isRejecting ? (
           <>
-            <Box sx={{ flexGrow: 1 }}>
-              <TextField
-                size="small"
-                placeholder="Add internal operational note..."
-                value={internalComment}
-                onChange={(e) => setInternalComment(e.target.value)}
-                sx={{ width: '100%', '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
-                InputProps={{
-                  endAdornment: (
-                    <IconButton onClick={handleAddInternalNote} disabled={!internalComment.trim() || submitting} size="small" color="primary">
-                      <Comment />
-                    </IconButton>
-                  )
-                }}
-              />
-            </Box>
-            <Button onClick={onClose}>Dismiss</Button>
+            <Button onClick={onClose} sx={{ ml: 'auto' }}>Dismiss</Button>
 
             {/* RMA Status Transition Workflow */}
             {/* DENY — available during review phase */}
@@ -290,13 +460,17 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
                   <Button variant="contained" color="secondary" startIcon={<Build />} onClick={() => onUpdateStatus(rma.id, "in_repair", "Starting technical repair")}>Start Repair</Button>
                 ) : (
                   /* Fast Track (Simple Returns/Exchanges) */
-                  <Button variant="contained" color="primary" startIcon={<LocalShipping />} onClick={() => onUpdateStatus(rma.id, "shipped", "Direct shipment initiated")}>Ship Now</Button>
+                  <Button variant="contained" color="primary" startIcon={<LocalShipping />} onClick={() => setActiveTab(3)}>Process Shipment</Button>
                 )}
               </>
             )}
 
             {rma.status === "in_repair" && ["warranty", "repair", "warranty_repair"].includes(rma.rmaType) && (
-              <Button variant="contained" color="primary" startIcon={<LocalShipping />} onClick={() => onUpdateStatus(rma.id, "shipped", "Repair completed, shipping back")}>Mark as Shipped</Button>
+              <Button variant="contained" color="success" startIcon={<CheckCircle />} onClick={() => onUpdateStatus(rma.id, "repaired", "Repair completed successfully")}>Mark as Repaired</Button>
+            )}
+
+            {rma.status === "repaired" && (
+              <Button variant="contained" color="primary" startIcon={<LocalShipping />} onClick={() => setActiveTab(3)}>Process Shipment</Button>
             )}
 
             {/* Stage 4: Closure (Both tracks) */}
@@ -390,8 +564,8 @@ const RMADetailsModal = ({ open, onClose, rma, onUpdateStatus }) => {
 
       {/* Attachment Preview Overlay */}
       <Dialog open={!!previewFile} onClose={handlePreviewClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="h6">{previewFile?.name || "Preview"}</Typography>
+        <DialogTitle component="div" sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Typography variant="h6" sx={{ fontWeight: 800 }}>{previewFile?.name || "Preview"}</Typography>
           <IconButton onClick={handlePreviewClose}><Close /></IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 0, height: '60vh', bgcolor: '#f1f5f9', display: 'flex', justifyContent: 'center' }}>

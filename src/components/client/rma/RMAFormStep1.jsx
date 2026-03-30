@@ -81,21 +81,29 @@ const RMAFormStep1 = ({ formData, onChange, errors = {} }) => {
   const fetchUserSales = async () => {
     setLoading(prev => ({ ...prev, sales: true }));
     try {
-      const response = await saleService.getMySales();
+      let user = {};
+      try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (_) {}
+      const isAdmin = ['admin', 'super_admin', 'csr'].includes(user.role);
 
-      if (response?.success) {
-        let salesData = [];
-        if (Array.isArray(response.data)) {
-          salesData = response.data;
-        } else if (response.data?.data && Array.isArray(response.data.data)) {
-          salesData = response.data.data;
+      let salesData = [];
+      if (isAdmin) {
+        // Admins: fetch sales via admin endpoint. customerId comes from URL param if available.
+        const params = new URLSearchParams(window.location.search);
+        const customerId = params.get('customerId');
+        const response = await saleService.getSales(customerId ? { customer_id: customerId } : {});
+        if (response?.success) {
+          const raw = response.data;
+          salesData = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
         }
-
-        setUserSales(salesData);
       } else {
-        console.error('Failed to fetch sales:', response?.message || 'Unknown error');
-        setUserSales([]);
+        const response = await saleService.getMySales();
+        if (response?.success) {
+          const rawData = response.data;
+          salesData = Array.isArray(rawData) ? rawData : (Array.isArray(rawData?.data) ? rawData.data : []);
+        }
       }
+
+      setUserSales(salesData);
     } catch (err) {
       console.error('Error fetching sales:', err);
       setUserSales([]);

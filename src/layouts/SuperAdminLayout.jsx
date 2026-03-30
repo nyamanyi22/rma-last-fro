@@ -20,6 +20,10 @@ import {
     Badge,
     useTheme,
     useMediaQuery,
+    Popover,
+    CircularProgress,
+    Button,
+    ListItemAvatar,
 } from '@mui/material';
 import {
     Menu as MenuIcon,
@@ -38,8 +42,14 @@ import {
     Notifications,
     Circle,
     AdminPanelSettings,
+    Drafts,
+    Email,
+    MarkEmailRead,
+    DeleteOutline,
+    MoreVert,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import notificationService from '../services/api/notificationService';
 
 const drawerWidth = 260;
 const collapsedWidth = 72;
@@ -54,6 +64,10 @@ const SuperAdminLayout = () => {
     const [open, setOpen] = useState(true);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [anchorEl, setAnchorEl] = useState(null);
+    const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [notifications, setNotifications] = useState([]);
+    const [fetchingNotifications, setFetchingNotifications] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -66,6 +80,56 @@ const SuperAdminLayout = () => {
     const handleLogout = () => {
         localStorage.clear();
         window.location.href = '/login';
+    };
+
+    const fetchUnreadCount = async () => {
+        try {
+            const count = await notificationService.getUnreadCount();
+            setUnreadCount(count);
+        } catch (error) {
+            console.error('Failed to update unread count', error);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30s
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleNotificationOpen = async (event) => {
+        setNotificationAnchorEl(event.currentTarget);
+        setFetchingNotifications(true);
+        try {
+            const response = await notificationService.getUnreadNotifications(5);
+            setNotifications(response.notifications.data || []);
+        } catch (error) {
+            console.error('Failed to fetch notifications', error);
+        } finally {
+            setFetchingNotifications(false);
+        }
+    };
+
+    const handleNotificationClose = () => setNotificationAnchorEl(null);
+
+    const markAsRead = async (id) => {
+        try {
+            await notificationService.markAsRead(id);
+            setNotifications(notifications.filter(n => n.id !== id));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (error) {
+            console.error('Failed to mark notification as read', error);
+        }
+    };
+
+    const markAllRead = async () => {
+        try {
+            await notificationService.markAllRead();
+            setNotifications([]);
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Failed to mark all as read', error);
+        }
     };
 
     const menuItems = [
@@ -272,10 +336,108 @@ const SuperAdminLayout = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Chip label="Super Admin" size="small" sx={{ bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 600, fontSize: 11, display: { xs: 'none', sm: 'flex' }, border: `1px solid ${ACCENT}33` }} />
                         <Tooltip title="Notifications">
-                            <IconButton sx={{ color: 'text.secondary', '&:hover': { bgcolor: `${ACCENT}12`, color: ACCENT } }}>
-                                <Badge badgeContent={0} color="error"><Notifications /></Badge>
+                            <IconButton 
+                                sx={{ color: 'text.secondary', '&:hover': { bgcolor: `${ACCENT}12`, color: ACCENT } }}
+                                onClick={handleNotificationOpen}
+                            >
+                                <Badge badgeContent={unreadCount} color="error" max={99}>
+                                    <Notifications />
+                                </Badge>
                             </IconButton>
                         </Tooltip>
+
+                        {/* Notifications Dropdown */}
+                        <Popover
+                            open={Boolean(notificationAnchorEl)}
+                            anchorEl={notificationAnchorEl}
+                            onClose={handleNotificationClose}
+                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                            PaperProps={{
+                                elevation: 8,
+                                sx: {
+                                    mt: 1.5,
+                                    width: 360,
+                                    maxWidth: '90vw',
+                                    borderRadius: 3,
+                                    overflow: 'hidden',
+                                    border: '1px solid rgba(0,0,0,0.06)',
+                                },
+                            }}
+                        >
+                            <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#f8fafc', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                                <Typography variant="subtitle1" fontWeight={700}>Notifications</Typography>
+                                {unreadCount > 0 && (
+                                    <Button size="small" onClick={markAllRead} sx={{ fontSize: 12, textTransform: 'none', fontWeight: 600, color: ACCENT }}>
+                                        Mark all read
+                                    </Button>
+                                )}
+                            </Box>
+
+                            <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                                {fetchingNotifications ? (
+                                    <Box sx={{ p: 4, textAlign: 'center' }}>
+                                        <CircularProgress size={24} sx={{ color: ACCENT }} />
+                                    </Box>
+                                ) : notifications.length === 0 ? (
+                                    <Box sx={{ p: 6, textAlign: 'center' }}>
+                                        <Drafts sx={{ fontSize: 40, color: 'text.disabled', mb: 1, opacity: 0.5 }} />
+                                        <Typography variant="body2" color="text.secondary">No unread notifications</Typography>
+                                    </Box>
+                                ) : (
+                                    <List sx={{ p: 0 }}>
+                                        {notifications.map((notif) => (
+                                            <ListItem 
+                                                key={notif.id} 
+                                                disablePadding 
+                                                sx={{ 
+                                                    borderBottom: '1px solid rgba(0,0,0,0.03)',
+                                                    '&:hover': { bgcolor: 'rgba(168, 85, 247, 0.04)' }
+                                                }}
+                                            >
+                                                <ListItemButton 
+                                                    onClick={() => {
+                                                        markAsRead(notif.id);
+                                                        // Determine correct route for super admin
+                                                        const url = notif.data.action_url ? notif.data.action_url.replace('/admin/', '/super-admin/') : '/super-admin/rma';
+                                                        navigate(url);
+                                                        handleNotificationClose();
+                                                    }}
+                                                    sx={{ py: 1.5, px: 2, alignItems: 'flex-start' }}
+                                                >
+                                                    <ListItemAvatar sx={{ minWidth: 48 }}>
+                                                        <Avatar sx={{ bgcolor: `${ACCENT}12`, color: ACCENT, width: 36, height: 36 }}>
+                                                            {notif.data.type === 'new_rma' ? <Assignment fontSize="small" /> : notif.data.type === 'internal_note' ? <Email fontSize="small" /> : <BarChart fontSize="small" />}
+                                                        </Avatar>
+                                                    </ListItemAvatar>
+                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                        <Typography variant="subtitle2" fontWeight={600} sx={{ fontSize: 13, color: '#334155', lineHeight: 1.3 }}>
+                                                            {notif.data.title}
+                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                            {notif.data.message}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: 'block', fontSize: 10 }}>
+                                                            {new Date(notif.created_at).toLocaleDateString()} at {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </Typography>
+                                                    </Box>
+                                                </ListItemButton>
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                )}
+                            </Box>
+
+                            <Box sx={{ p: 1.5, textAlign: 'center', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                                <Button 
+                                    fullWidth 
+                                    onClick={() => { navigate('/super-admin/notifications'); handleNotificationClose(); }}
+                                    sx={{ textTransform: 'none', fontWeight: 600, color: 'text.secondary', '&:hover': { color: ACCENT } }}
+                                >
+                                    View all notifications
+                                </Button>
+                            </Box>
+                        </Popover>
                         <Tooltip title="Account">
                             <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0.5 }}>
                                 <Avatar sx={{ width: 34, height: 34, background: `linear-gradient(135deg, ${ACCENT}, #7c3aed)`, fontSize: 13, fontWeight: 700, border: `2px solid ${ACCENT}44` }}>{userInitial}</Avatar>

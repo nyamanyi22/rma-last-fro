@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
-    VisibilityOutlined,
+    AddOutlined,
     EditOutlined,
     DeleteOutline,
     EmailOutlined,
@@ -34,7 +34,7 @@ const AVATAR_COLORS = [
 
 const CustomerTable = ({
     customers,
-    onView,
+    onCreateRMA,
     onEdit,
     onDelete,
     onToggleStatus,
@@ -223,13 +223,13 @@ const CustomerTable = ({
 
                                 <TableCell align="right">
                                     <Stack direction="row" justifyContent="flex-end" spacing={1}>
-                                        <Tooltip title="View Profile">
+                                        <Tooltip title="Create RMA">
                                             <IconButton
                                                 size="small"
-                                                onClick={(e) => { e.stopPropagation(); onView(customer); }}
+                                                onClick={(e) => { e.stopPropagation(); onCreateRMA(customer); }}
                                                 sx={{ bgcolor: alpha('#1976d2', 0.05), color: '#1976d2', '&:hover': { bgcolor: alpha('#1976d2', 0.1) } }}
                                             >
-                                                <VisibilityOutlined fontSize="small" />
+                                                <AddOutlined fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Edit Member">

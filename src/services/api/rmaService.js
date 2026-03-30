@@ -58,7 +58,50 @@ class RMAService {
             createdAt: rma.created_at,
             submittedDate: rma.created_at,
             formattedDate: this.formatDate(rma.created_at),
+            formattedDateTime: this.formatDateTime(rma.created_at),
             updatedAt: rma.updated_at,
+            statusHistory: (rma.status_history || rma.statusHistory || []).map(h => this.mapStatusHistory(h)),
+            comments: (rma.comments || []).map(c => this.mapComment(c)),
+        };
+    }
+
+    /**
+     * Map status history record
+     */
+    mapStatusHistory(history) {
+        if (!history) return null;
+        return {
+            id: history.id,
+            oldStatus: history.old_status,
+            oldStatusLabel: this.getStatusLabel(history.old_status),
+            newStatus: history.new_status,
+            newStatusLabel: this.getStatusLabel(history.new_status),
+            changedBy: history.changed_by,
+            changedByName: history.changer ? 
+                (`${history.changer.name || (history.changer.first_name ? `${history.changer.first_name} ${history.changer.last_name}` : 'Unknown')} (${history.changer.short_role_label || history.changer.role_label || history.changer.role || 'User'})`) : 
+                (history.changed_by_name || 'System'),
+            notes: history.notes,
+            createdAt: history.created_at,
+            formattedDate: this.formatDateTime(history.created_at),
+        };
+    }
+
+    /**
+     * Map comment record
+     */
+    mapComment(comment) {
+        if (!comment) return null;
+        return {
+            id: comment.id,
+            userId: comment.user_id,
+            userName: comment.user ? 
+                (`${comment.user.name || `${comment.user.first_name} ${comment.user.last_name}`.trim()} (${comment.user.short_role_label || comment.user.role_label || comment.user.role || 'User'})`) : 
+                'Unknown',
+            type: comment.type,
+            comment: comment.comment,
+            notifyCustomer: comment.notify_customer,
+            createdAt: comment.created_at,
+            formattedDate: this.formatDateTime(comment.created_at),
         };
     }
 
@@ -434,6 +477,11 @@ class RMAService {
                 formData.append('receipt_number', rmaData.receiptNumber);
             }
 
+            // Admin: optionally associate RMA with a specific customer
+            if (rmaData.customerId) {
+                formData.append('customer_id', String(rmaData.customerId));
+            }
+
             // Contact Info
             if (rmaData.contactName) formData.append('contact_name', rmaData.contactName);
             if (rmaData.contactEmail) formData.append('contact_email', rmaData.contactEmail);
@@ -471,6 +519,58 @@ class RMAService {
 
         } catch (error) {
             console.error('❌ submitRma caught error:', error);
+            throw this.handleError(error);
+        }
+    }
+
+    /**
+     * Admin-only: Create an RMA on behalf of a customer
+     * Posts to /admin/rma/create with customer_id
+     */
+    async adminCreateRma(rmaData) {
+        try {
+            console.log('📦 adminCreateRma called with:', rmaData);
+
+            const formData = new FormData();
+
+            formData.append('rma_type', rmaData.rmaType);
+            formData.append('product_id', String(rmaData.productId));
+
+            if (rmaData.saleId) formData.append('sale_id', String(rmaData.saleId));
+            if (rmaData.customerId) formData.append('customer_id', String(rmaData.customerId));
+
+            formData.append('reason', (rmaData.reason === 'other_return' || rmaData.reason === 'other_warranty') ? 'other' : rmaData.reason);
+            formData.append('issue_description', rmaData.issueDescription);
+
+            if (rmaData.serialNumber) formData.append('serial_number_provided', rmaData.serialNumber);
+            if (rmaData.receiptNumber) formData.append('receipt_number', rmaData.receiptNumber);
+
+            if (rmaData.contactName) formData.append('contact_name', rmaData.contactName);
+            if (rmaData.contactEmail) formData.append('contact_email', rmaData.contactEmail);
+            if (rmaData.contactPhone) formData.append('contact_phone', rmaData.contactPhone);
+            if (rmaData.shippingAddress) formData.append('shipping_address', rmaData.shippingAddress);
+
+            if (rmaData.attachments?.length > 0) {
+                rmaData.attachments.forEach((item) => {
+                    if (item.file instanceof File) {
+                        formData.append('attachments[]', item.file);
+                    }
+                });
+            }
+
+            const response = await rmaApi.adminCreateRma(formData);
+
+            if (response.data?.success) {
+                return {
+                    success: true,
+                    message: response.data.message,
+                    data: this.mapRma(response.data.data?.rma || response.data.data)
+                };
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('❌ adminCreateRma caught error:', error);
             throw this.handleError(error);
         }
     }
@@ -571,6 +671,30 @@ class RMAService {
     async getFileBlob(url) {
         try {
             const response = await api.get(url, { responseType: 'blob' });
+            return response.data;
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    /**
+     * Update shipping information (Admin/CSR)
+     */
+    async updateShipping(id, carrier, trackingNumber) {
+        try {
+            const response = await rmaApi.updateShipping(id, {
+                carrier,
+                tracking_number: trackingNumber || ''
+            });
+
+            if (response.data?.success) {
+                return {
+                    success: true,
+                    data: this.mapRma(response.data.data),
+                    message: response.data.message
+                };
+            }
+
             return response.data;
         } catch (error) {
             throw this.handleError(error);

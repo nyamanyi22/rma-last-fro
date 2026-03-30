@@ -38,8 +38,23 @@ const RMAFormStep3 = ({ formData, rmaType, onChange }) => {
 
   const fetchPolicy = async () => {
     try {
+      let user = {};
+      try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (_) {}
+      const isAdmin = ['admin', 'super_admin', 'csr'].includes(user.role);
+
+      if (isAdmin) {
+        // Admin users cannot access either policy endpoint — skip fetch entirely
+        setPolicyText('Return policy review is waived for admin-initiated RMA submissions.');
+        setLoadingPolicy(false);
+        return;
+      }
+
       const response = await rmaApi.getReturnPolicy();
-      setPolicyText(response.data.data);
+      const policy = response.data?.data?.policy_text
+        || response.data?.data
+        || response.data?.policy_text
+        || '';
+      setPolicyText(policy || 'No return policy configured.');
     } catch (err) {
       console.error("Failed to fetch policy", err);
       setPolicyText("Unable to load return policy. Please contact support.");

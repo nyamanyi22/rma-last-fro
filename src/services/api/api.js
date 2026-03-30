@@ -300,6 +300,14 @@ export const rmaApi = {
     }),
 
     /**
+     * Create RMA on behalf of a customer (admin only)
+     * POST /admin/rma/create
+     */
+    adminCreateRma: (data) => api.post('/admin/rma/create', data, {
+        headers: { 'Content-Type': undefined }
+    }),
+
+    /**
      * Bulk delete RMAs
      * POST /admin/rma/bulk-delete
      */

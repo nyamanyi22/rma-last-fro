@@ -22,6 +22,8 @@ import SalesManagement from './pages/admin/SalesManagement';
 import RMAReports from './pages/admin/RMAReports';
 import AdminLayout from './layouts/AdminLayout';
 import AdminProfile from './pages/admin/AdminProfile';
+import AdminCreateRMA from './pages/admin/AdminCreateRMA';
+import AdminNotifications from './pages/admin/AdminNotifications';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 import VerifyEmail from './components/auth/VerifyEmail';
@@ -169,6 +171,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="rma" element={<RMAManagement />} />
+              <Route path="rma/new" element={<AdminCreateRMA />} />
               
               {/* Restricted Admin Routes */}
               <Route path="products" element={
@@ -195,7 +198,7 @@ function App() {
               <Route path="profile" element={<AdminProfile />} />
 
               {/* Placeholders for now */}
-              <Route path="notifications" element={<div style={{ padding: 20 }}>Notifications Module Coming Soon</div>} />
+              <Route path="notifications" element={<AdminNotifications />} />
             </Route>
 
             {/* Super Admin Routes */}
@@ -215,6 +218,7 @@ function App() {
               <Route path="reports" element={<SuperAdminReports />} />
               <Route path="sales" element={<SuperAdminSalesManagement />} />
               <Route path="profile" element={<AdminProfile />} />
+              <Route path="notifications" element={<AdminNotifications />} />
             </Route>
 
             {/* 404 Routes */}

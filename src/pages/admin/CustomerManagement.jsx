@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Container,
     Typography,
@@ -79,6 +80,7 @@ const CustomerManagement = () => {
     const [errorMessage, setErrorMessage] = useState("");
     const [selectedIds, setSelectedIds] = useState([]);
     const [formErrors, setFormErrors] = useState({});
+    const navigate = useNavigate();
     const [stats, setStats] = useState({
         total: 0,
         active: 0,
@@ -156,6 +158,10 @@ const CustomerManagement = () => {
         setFormErrors({});
         setDialogMode("create");
         setDialogOpen(true);
+    };
+
+    const handleCreateRMA = (customer) => {
+        navigate(`/admin/rma/new?customerId=${customer.id}`);
     };
 
     const handleEditCustomer = (customer) => {
@@ -442,6 +448,7 @@ const CustomerManagement = () => {
                     )}
                     <CustomerTable
                         customers={customers}
+                        onCreateRMA={handleCreateRMA}
                         onEdit={handleEditCustomer}
                         onDelete={handleDeleteCustomer}
                         onToggleStatus={handleToggleStatus}

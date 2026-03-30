@@ -349,6 +349,21 @@ const RMADetails = () => {
                                 <Chip label={rma.reasonLabel} size="small" color="primary" variant="outlined" />
                             </Grid>
 
+                            {/* Shipping Information for Client */}
+                            {rma.trackingNumber && (
+                                <Grid size={12}>
+                                    <Divider sx={{ my: 2 }} />
+                                    <Box sx={{ p: 2, borderRadius: 3, bgcolor: alpha('#6366f1', 0.05), border: '1px solid', borderColor: alpha('#6366f1', 0.2), display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <LocalShipping sx={{ color: 'primary.main', fontSize: 32 }} />
+                                        <Box>
+                                            <Typography variant="overline" sx={{ fontWeight: 800, color: 'primary.main', display: 'block', lineHeight: 1 }}>Logistics Information</Typography>
+                                            <Typography variant="body1" sx={{ fontWeight: 700 }}>{rma.carrier}: {rma.trackingNumber}</Typography>
+                                            <Typography variant="caption" color="text.secondary">Use this number to track your shipment on the carrier's website.</Typography>
+                                        </Box>
+                                    </Box>
+                                </Grid>
+                            )}
+
                             {/* Attachments */}
                             {rma.attachments && rma.attachments.length > 0 && (
                                 <Grid size={12}>
