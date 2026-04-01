@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Container,
@@ -33,6 +33,8 @@ const CustomerLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
   const navigate = useNavigate();
   const theme = useTheme();
 
@@ -40,6 +42,22 @@ const CustomerLogin = () => {
   const validateEmail = (email) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
+  };
+
+  const handleResend = async () => {
+    if (!email) return;
+    setResendLoading(true);
+    setError('');
+    setResendMessage('');
+
+    try {
+      await authService.resendVerificationEmail(email);
+      setResendMessage('Verification email has been resent. Please check your inbox.');
+    } catch (err) {
+      setError(err.message || 'Failed to resend verification email.');
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -67,7 +85,9 @@ const CustomerLogin = () => {
       await authService.login(email, password);
       navigate('/client');
     } catch (err) {
-      if (err.response?.status === 401) {
+      if (err.unverified) {
+        setError(err.message);
+      } else if (err.response?.status === 401) {
         setError('Invalid email or password. Please try again.');
       } else if (err.response?.status === 403) {
         setError('Your account is not activated. Please check your email for verification link.');
@@ -154,8 +174,29 @@ const CustomerLogin = () => {
 
               <Box component="form" onSubmit={handleSubmit} noValidate>
                 {error && (
-                  <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                  <Alert 
+                    severity="error" 
+                    sx={{ mb: 2, borderRadius: 2 }}
+                    action={
+                      error.includes('verify your email') && (
+                        <Button 
+                          color="inherit" 
+                          size="small" 
+                          onClick={handleResend}
+                          disabled={resendLoading}
+                        >
+                          {resendLoading ? 'Sending...' : 'Resend'}
+                        </Button>
+                      )
+                    }
+                  >
                     {error}
+                  </Alert>
+                )}
+
+                {resendMessage && (
+                  <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+                    {resendMessage}
                   </Alert>
                 )}
 

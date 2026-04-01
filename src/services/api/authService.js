@@ -347,6 +347,14 @@ class AuthService {
 
         // Authorization errors (403)
         if (status === 403) {
+            // Special handling for email verification
+            if (data.unverified) {
+                const error = new Error(data.message || 'Please verify your email.');
+                error.unverified = true;
+                error.email = data.email;
+                error.status = 403;
+                return error;
+            }
             return new Error(data.message || 'You do not have permission to perform this action.');
         }
 
