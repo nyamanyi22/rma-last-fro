@@ -71,6 +71,34 @@ class SuperAdminService {
     }
 
     // ================================================================
+    // SYSTEM SETTINGS
+    // ================================================================
+
+    async getSettings() {
+        try {
+            const response = await superAdminApi.getSettings();
+            if (response.data?.success) {
+                return { success: true, data: response.data.data };
+            }
+            return response.data;
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    async updateSettings(data) {
+        try {
+            const response = await superAdminApi.updateSettings(data);
+            if (response.data?.success) {
+                return { success: true, data: response.data.data, message: response.data.message };
+            }
+            return response.data;
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    // ================================================================
     // ERROR HANDLER
     // ================================================================
 

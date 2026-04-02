@@ -37,6 +37,12 @@ const StaffLogin = () => {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
+
+  // 2FA States
+  const [show2FA, setShow2FA] = useState(false);
+  const [twoFACode, setTwoFACode] = useState('');
+  const [twoFAMessage, setTwoFAMessage] = useState('');
+
   const navigate = useNavigate();
   const theme = useTheme();
 
@@ -57,6 +63,50 @@ const StaffLogin = () => {
       setResendMessage('Verification email has been resent. Please check your inbox.');
     } catch (err) {
       setError(err.message || 'Failed to resend verification email.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async (e) => {
+    e.preventDefault();
+    setError('');
+    setResendMessage('');
+
+    if (!twoFACode || twoFACode.length !== 6) {
+      setError('Please enter a valid 6-digit code');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await authService.verify2FA(email, twoFACode);
+
+      console.log('2FA login successful:', response);
+
+      if (response.user.role === 'super_admin') {
+        navigate('/super-admin');
+      } else {
+        navigate('/admin');
+      }
+    } catch (err) {
+      setError(err.message || 'Invalid verification code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend2FA = async () => {
+    setResendLoading(true);
+    setError('');
+    setResendMessage('');
+
+    try {
+      const response = await authService.resend2FA(email);
+      setResendMessage(response.message || 'A new code has been sent to your email.');
+    } catch (err) {
+      setError(err.message || 'Failed to resend 2FA code.');
     } finally {
       setResendLoading(false);
     }
@@ -87,6 +137,12 @@ const StaffLogin = () => {
       const response = await authService.staffLogin(email, password);
 
       console.log('Staff login successful:', response);
+
+      if (response.requires_2fa) {
+        setShow2FA(true);
+        setTwoFAMessage(response.message || 'Please enter the 6-digit code sent to your email.');
+        return;
+      }
 
       // Redirect based on role from backend
       if (response.user.role === 'super_admin') {
@@ -137,7 +193,7 @@ const StaffLogin = () => {
                     mr: 2,
                   }}
                 >
-                  <AdminPanelSettings sx={{ color: 'white', fontSize: 28 }} />
+                  <img src="/logo.png" alt="RMA Pro Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </Box>
                 <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
                   Staff Portal
@@ -172,7 +228,8 @@ const StaffLogin = () => {
                 </Box>
               </Box>
 
-              {/* Demo Accounts Card */}
+              {/* Demo Accounts Card - Hidden for Deployment */}
+              {/* 
               <Paper
                 elevation={0}
                 sx={{
@@ -211,8 +268,10 @@ const StaffLogin = () => {
                   Password: <strong>password</strong> for all demo accounts
                 </Typography>
               </Paper>
+              */}
             </Box>
           </Grid>
+
 
           {/* Right Column - Login Form */}
           <Grid size={{ xs: 12, md: 6 }}>
@@ -226,16 +285,16 @@ const StaffLogin = () => {
                 </Typography>
               </Box>
 
-              <Box component="form" onSubmit={handleSubmit} noValidate>
+              <Box component="form" onSubmit={show2FA ? handleVerify2FA : handleSubmit} noValidate>
                 {error && (
-                  <Alert 
-                    severity="error" 
+                  <Alert
+                    severity="error"
                     sx={{ mb: 2, borderRadius: 2 }}
                     action={
                       error.includes('verify your email') && (
-                        <Button 
-                          color="inherit" 
-                          size="small" 
+                        <Button
+                          color="inherit"
+                          size="small"
                           onClick={handleResend}
                           disabled={resendLoading}
                         >
@@ -254,58 +313,126 @@ const StaffLogin = () => {
                   </Alert>
                 )}
 
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  label="Work Email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  autoComplete="email"
-                  autoFocus
-                  placeholder="staff@company.com"
-                  sx={{ mb: 2 }}
-                />
+                {!show2FA ? (
+                  <>
+                    <TextField
+                      margin="normal"
+                      required
+                      fullWidth
+                      label="Work Email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                      autoComplete="email"
+                      autoFocus
+                      placeholder="staff@company.com"
+                      sx={{ mb: 2 }}
+                    />
 
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  autoComplete="current-password"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="toggle password visibility"
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
+                    <TextField
+                      margin="normal"
+                      required
+                      fullWidth
+                      label="Password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                      autoComplete="current-password"
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowPassword(!showPassword)}
+                              edge="end"
+                            >
+                              {showPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{ mb: 2 }}
+                    />
+
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      size="large"
+                      sx={{ mt: 2, mb: 3, py: 1.5, borderRadius: 2 }}
+                      disabled={loading}
+                      endIcon={!loading && <ArrowForward />}
+                    >
+                      {loading ? <CircularProgress size={24} /> : 'Sign In to Staff Portal'}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+                      {twoFAMessage}
+                    </Alert>
+                    <TextField
+                      margin="normal"
+                      required
+                      fullWidth
+                      label="6-Digit Verification Code"
+                      type="text"
+                      value={twoFACode}
+                      onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      disabled={loading}
+                      autoComplete="one-time-code"
+                      autoFocus
+                      placeholder="123456"
+                      inputProps={{
+                        maxLength: 6,
+                        style: { textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.2rem', fontWeight: 'bold' }
+                      }}
+                      sx={{ mb: 2 }}
+                    />
+                    <Button
+                      type="submit"
+                      fullWidth
+                      variant="contained"
+                      size="large"
+                      sx={{ mt: 2, mb: 2, py: 1.5, borderRadius: 2 }}
+                      disabled={loading}
+                      endIcon={!loading && <Security />}
+                    >
+                      {loading ? <CircularProgress size={24} /> : 'Verify Code'}
+                    </Button>
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 6 }}>
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          onClick={() => {
+                            setShow2FA(false);
+                            setTwoFACode('');
+                            setError('');
+                            setResendMessage('');
+                          }}
+                          disabled={loading}
+                          sx={{ py: 1 }}
                         >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{ mb: 2 }}
-                />
-
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  sx={{ mt: 2, mb: 3, py: 1.5, borderRadius: 2 }}
-                  disabled={loading}
-                  endIcon={!loading && <ArrowForward />}
-                >
-                  {loading ? <CircularProgress size={24} /> : 'Sign In to Staff Portal'}
-                </Button>
+                          Back
+                        </Button>
+                      </Grid>
+                      <Grid size={{ xs: 6 }}>
+                        <Button
+                          fullWidth
+                          variant="text"
+                          onClick={handleResend2FA}
+                          disabled={loading || resendLoading}
+                          sx={{ py: 1 }}
+                        >
+                          {resendLoading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : 'Resend'}
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </>
+                )}
 
                 <Divider sx={{ my: 2 }}>
                   <Typography variant="caption" color="text.secondary">

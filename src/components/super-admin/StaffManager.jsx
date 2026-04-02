@@ -29,7 +29,8 @@ import {
   CircularProgress,
   Tooltip,
 } from "@mui/material";
-import { Add, Edit, Delete, Refresh, Search } from "@mui/icons-material";
+import { Add, Edit, Delete, Refresh, Search, ErrorOutline } from "@mui/icons-material";
+import { alpha } from "@mui/material/styles";
 import superAdminService from "../../services/api/superAdminService";
 
 const ROLE_COLORS = {
@@ -56,6 +57,12 @@ const StaffManager = () => {
   const [editMode, setEditMode]     = useState(false);
   const [currentStaff, setCurrentStaff] = useState(emptyForm);
   const [formError, setFormError]   = useState("");
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+  });
 
   // ----------------------------------------------------------------
   // Fetch staff list
@@ -161,18 +168,25 @@ const StaffManager = () => {
   // ----------------------------------------------------------------
   // Delete
   // ----------------------------------------------------------------
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Delete staff member "${name}"? This cannot be undone.`)) return;
-    try {
-      const res = await superAdminService.deleteStaff(id);
-      if (res.success) {
-        setSuccess(res.message || "Staff member deleted.");
-        fetchStaff();
-        setTimeout(() => setSuccess(""), 3000);
+  const handleDelete = (id, name) => {
+    setConfirmDialog({
+      open: true,
+      title: "Delete Staff Member",
+      message: `Are you sure you want to delete staff member "${name}"? This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, open: false }));
+        try {
+          const res = await superAdminService.deleteStaff(id);
+          if (res.success) {
+            setSuccess(res.message || "Staff member deleted.");
+            fetchStaff();
+            setTimeout(() => setSuccess(""), 3000);
+          }
+        } catch (err) {
+          setError(err.message || "Failed to delete staff member.");
+        }
       }
-    } catch (err) {
-      setError(err.message || "Failed to delete staff member.");
-    }
+    });
   };
 
   // ----------------------------------------------------------------
@@ -376,6 +390,66 @@ const StaffManager = () => {
             {saving ? <CircularProgress size={20} /> : (editMode ? "Update" : "Create")}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+        maxWidth="sm"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            p: 2,
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ px: 3, pt: 3, pb: 1, borderBottom: 'none' }}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Box
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: alpha('#d32f2f', 0.1),
+                color: '#d32f2f',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <ErrorOutline fontSize="medium" />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e293b' }}>
+              {confirmDialog.title}
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 2 }}>
+          <Typography variant="body1" sx={{ color: '#475569', fontSize: '1.05rem' }}>
+            {confirmDialog.message}
+          </Typography>
+        </DialogContent>
+        <Box sx={{ px: 3, pb: 3, pt: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+            sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 600, color: '#64748b', borderColor: '#cbd5e1' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={confirmDialog.onConfirm}
+            sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 700, boxShadow: '0 4px 14px 0 rgba(211, 47, 47, 0.39)' }}
+          >
+            Confirm Delete
+          </Button>
+        </Box>
       </Dialog>
     </Box>
   );

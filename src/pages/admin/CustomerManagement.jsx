@@ -19,6 +19,10 @@ import {
     Stack,
     Fade,
     Snackbar,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
@@ -33,6 +37,8 @@ import {
     DeleteOutline,
     CheckCircleOutline,
     BlockOutlined,
+    ErrorOutline,
+    FilterList,
 } from "@mui/icons-material";
 import CustomerTable from "../../components/admin/customer-management/CustomerTable";
 import CustomerForm from "../../components/admin/customer-management/CustomerForm";
@@ -71,6 +77,7 @@ const GlassCard = ({ title, value, icon: Icon, color }) => (
 const CustomerManagement = () => {
     const [customers, setCustomers] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedStatus, setSelectedStatus] = useState("all");
     const [dialogOpen, setDialogOpen] = useState(false);
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -81,6 +88,12 @@ const CustomerManagement = () => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [formErrors, setFormErrors] = useState({});
     const navigate = useNavigate();
+    const [confirmDialog, setConfirmDialog] = useState({
+        open: false,
+        title: "",
+        message: "",
+        onConfirm: null,
+    });
     const [stats, setStats] = useState({
         total: 0,
         active: 0,
@@ -110,6 +123,10 @@ const CustomerManagement = () => {
                 per_page: rowsPerPage,
                 search: searchQuery || undefined,
             };
+
+            if (selectedStatus !== "all") {
+                params.is_active = selectedStatus === "active" ? 1 : 0;
+            }
 
             const response = await CustomerService.getCustomers(params);
 
@@ -151,7 +168,7 @@ const CustomerManagement = () => {
             loadCustomers();
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchQuery]);
+    }, [searchQuery, selectedStatus]);
 
     const handleCreateCustomer = () => {
         setSelectedCustomer(null);
@@ -171,18 +188,25 @@ const CustomerManagement = () => {
         setDialogOpen(true);
     };
 
-    const handleDeleteCustomer = async (customerId) => {
-        if (!window.confirm("Are you sure you want to delete this customer?")) return;
-        setLoading(true);
-        try {
-            await CustomerService.deleteCustomer(customerId);
-            showSuccess("Customer deleted successfully");
-            loadCustomers();
-        } catch (err) {
-            showError(err.message || "Failed to delete customer");
-        } finally {
-            setLoading(false);
-        }
+    const handleDeleteCustomer = (customerId) => {
+        setConfirmDialog({
+            open: true,
+            title: "Delete Customer",
+            message: "Are you sure you want to delete this customer? All their associated records might be affected.",
+            onConfirm: async () => {
+                setConfirmDialog((prev) => ({ ...prev, open: false }));
+                setLoading(true);
+                try {
+                    await CustomerService.deleteCustomer(customerId);
+                    showSuccess("Customer deleted successfully");
+                    loadCustomers();
+                } catch (err) {
+                    showError(err.message || "Failed to delete customer");
+                } finally {
+                    setLoading(false);
+                }
+            }
+        });
     };
 
     const handleToggleStatus = async (customerId) => {
@@ -224,19 +248,26 @@ const CustomerManagement = () => {
         }
     };
 
-    const handleBulkDelete = async () => {
-        if (!window.confirm(`Delete ${selectedIds.length} selected customers?`)) return;
-        setLoading(true);
-        try {
-            await CustomerService.bulkDeleteCustomers(selectedIds);
-            showSuccess("Customers deleted successfully");
-            setSelectedIds([]);
-            loadCustomers();
-        } catch (err) {
-            showError(err.message || "Failed to delete customers");
-        } finally {
-            setLoading(false);
-        }
+    const handleBulkDelete = () => {
+        setConfirmDialog({
+            open: true,
+            title: "Bulk Delete Customers",
+            message: `Are you sure you want to delete ${selectedIds.length} customers? This action cannot be undone.`,
+            onConfirm: async () => {
+                setConfirmDialog((prev) => ({ ...prev, open: false }));
+                setLoading(true);
+                try {
+                    await CustomerService.bulkDeleteCustomers(selectedIds);
+                    showSuccess("Customers deleted successfully");
+                    setSelectedIds([]);
+                    loadCustomers();
+                } catch (err) {
+                    showError(err.message || "Failed to delete customers");
+                } finally {
+                    setLoading(false);
+                }
+            }
+        });
     };
 
     const handleBulkStatusUpdate = async (status) => {
@@ -376,6 +407,35 @@ const CustomerManagement = () => {
                             ),
                         }}
                     />
+
+                    <FormControl size="small" sx={{ minWidth: 160 }}>
+                        <InputLabel>Status</InputLabel>
+                        <Select
+                            value={selectedStatus}
+                            onChange={(e) => setSelectedStatus(e.target.value)}
+                            label="Status"
+                            sx={{ borderRadius: 2, bgcolor: 'background.paper' }}
+                        >
+                            <MenuItem value="all">All Status</MenuItem>
+                            <MenuItem value="active">Active Only</MenuItem>
+                            <MenuItem value="inactive">Inactive Only</MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    {(searchQuery || selectedStatus !== "all") && (
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                setSearchQuery("");
+                                setSelectedStatus("all");
+                            }}
+                            startIcon={<FilterList />}
+                            sx={{ borderRadius: 2 }}
+                        >
+                            Reset Filters
+                        </Button>
+                    )}
+
                     <Stack direction="row" spacing={1}>
                         <Tooltip title="Refresh Catalog">
                             <span>
@@ -526,6 +586,66 @@ const CustomerManagement = () => {
                         onCancel={() => setImportDialogOpen(false)}
                     />
                 </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={confirmDialog.open}
+                onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+                maxWidth="sm"
+                fullWidth
+                TransitionComponent={Fade}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 4,
+                        p: 2,
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        backdropFilter: 'blur(10px)',
+                        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
+                    }
+                }}
+            >
+                <DialogTitle sx={{ px: 3, pt: 3, pb: 1 }}>
+                    <Box display="flex" alignItems="center" gap={2}>
+                        <Box
+                            sx={{
+                                p: 1.5,
+                                borderRadius: 2,
+                                bgcolor: alpha('#d32f2f', 0.1),
+                                color: '#d32f2f',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <ErrorOutline fontSize="medium" />
+                        </Box>
+                        <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e293b' }}>
+                            {confirmDialog.title}
+                        </Typography>
+                    </Box>
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, py: 2 }}>
+                    <Typography variant="body1" sx={{ color: '#475569', fontSize: '1.05rem' }}>
+                        {confirmDialog.message}
+                    </Typography>
+                </DialogContent>
+                <Box sx={{ px: 3, pb: 3, pt: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                    <Button
+                        variant="outlined"
+                        onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+                        sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 600, color: '#64748b', borderColor: '#cbd5e1' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={confirmDialog.onConfirm}
+                        sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 700, boxShadow: '0 4px 14px 0 rgba(211, 47, 47, 0.39)' }}
+                    >
+                        Confirm Delete
+                    </Button>
+                </Box>
             </Dialog>
 
             <Snackbar

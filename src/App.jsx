@@ -40,6 +40,10 @@ import SuperAdminSecurity from './pages/super-admin/SuperAdminSecurity';
 import SuperAdminReports from './pages/super-admin/SuperAdminReports';
 import SuperAdminSalesManagement from './pages/super-admin/SuperAdminSalesManagement';
 
+// Error Pages
+import NotFound from './pages/error/NotFound';
+import Forbidden from './pages/error/Forbidden';
+
 // Create theme
 const theme = createTheme({
   palette: {
@@ -221,9 +225,9 @@ function App() {
               <Route path="notifications" element={<AdminNotifications />} />
             </Route>
 
-            {/* 404 Routes */}
-            <Route path="/unauthorized" element={<div>Unauthorized Access</div>} />
-            <Route path="*" element={<div>404 - Page Not Found</div>} />
+            {/* Error Pages */}
+            <Route path="/unauthorized" element={<Forbidden />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </LocalizationProvider>

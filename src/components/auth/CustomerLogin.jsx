@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Container,
@@ -127,7 +127,7 @@ const CustomerLogin = () => {
                     mr: 2,
                   }}
                 >
-                  <SupportAgent sx={{ color: 'white', fontSize: 28 }} />
+                  <img src="/logo.png" alt="RMA Pro" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </Box>
                 <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
                   RMA Pro
@@ -174,14 +174,14 @@ const CustomerLogin = () => {
 
               <Box component="form" onSubmit={handleSubmit} noValidate>
                 {error && (
-                  <Alert 
-                    severity="error" 
+                  <Alert
+                    severity="error"
                     sx={{ mb: 2, borderRadius: 2 }}
                     action={
                       error.includes('verify your email') && (
-                        <Button 
-                          color="inherit" 
-                          size="small" 
+                        <Button
+                          color="inherit"
+                          size="small"
                           onClick={handleResend}
                           disabled={resendLoading}
                         >

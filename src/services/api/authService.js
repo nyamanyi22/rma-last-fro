@@ -74,6 +74,38 @@ class AuthService {
     }
 
     /**
+     * Verify 2FA code
+     */
+    async verify2FA(email, code) {
+        try {
+            const response = await authApi.verify2FA(email, code);
+
+            const token = response.data.token || response.data.access_token;
+            if (token) {
+                localStorage.setItem('token', token);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+                this.setupAutoLogout();
+            }
+
+            return response.data;
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    /**
+     * Resend 2FA code
+     */
+    async resend2FA(email) {
+        try {
+            const response = await authApi.resend2FA(email);
+            return response.data;
+        } catch (error) {
+            throw this.handleError(error);
+        }
+    }
+
+    /**
      * Logout user
      */
     async logout() {

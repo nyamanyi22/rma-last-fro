@@ -117,6 +117,12 @@ const ProductManagement = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [formErrors, setFormErrors] = useState({});
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+  });
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -219,20 +225,26 @@ const ProductManagement = () => {
     setDialogOpen(true);
   };
 
-  const handleDeleteProduct = async (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      setLoading(true);
-      try {
-        await ProductService.deleteProduct(productId);
-        setSuccessMessage("Product deleted successfully");
-        loadProducts();
-      } catch (err) {
-        setErrorMessage(err.message || "Failed to delete product");
-      } finally {
-        setLoading(false);
-        setTimeout(() => setSuccessMessage(""), 3000);
+  const handleDeleteProduct = (productId) => {
+    setConfirmDialog({
+      open: true,
+      title: "Delete Product",
+      message: "Are you sure you want to delete this product? This action cannot be undone.",
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, open: false }));
+        setLoading(true);
+        try {
+          await ProductService.deleteProduct(productId);
+          setSuccessMessage("Product deleted successfully");
+          loadProducts();
+        } catch (err) {
+          setErrorMessage(err.message || "Failed to delete product");
+        } finally {
+          setLoading(false);
+          setTimeout(() => setSuccessMessage(""), 3000);
+        }
       }
-    }
+    });
   };
 
   const handleToggleStatus = async (productId) => {
@@ -299,21 +311,27 @@ const ProductManagement = () => {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} products?`)) {
-      setLoading(true);
-      try {
-        await ProductService.bulkDeleteProducts(selectedIds);
-        setSuccessMessage("Products deleted successfully");
-        setSelectedIds([]);
-        loadProducts();
-      } catch (err) {
-        setErrorMessage(err.message || "Failed to delete products");
-      } finally {
-        setLoading(false);
-        setTimeout(() => setSuccessMessage(""), 3000);
+  const handleBulkDelete = () => {
+    setConfirmDialog({
+      open: true,
+      title: "Bulk Delete Products",
+      message: `Are you sure you want to delete ${selectedIds.length} products? This action cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, open: false }));
+        setLoading(true);
+        try {
+          await ProductService.bulkDeleteProducts(selectedIds);
+          setSuccessMessage("Products deleted successfully");
+          setSelectedIds([]);
+          loadProducts();
+        } catch (err) {
+          setErrorMessage(err.message || "Failed to delete products");
+        } finally {
+          setLoading(false);
+          setTimeout(() => setSuccessMessage(""), 3000);
+        }
       }
-    }
+    });
   };
 
   const handleBulkStatusUpdate = async (status) => {
@@ -640,6 +658,67 @@ const ProductManagement = () => {
             onCancel={() => setImportDialogOpen(false)}
           />
         </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+        maxWidth="sm"
+        fullWidth
+        TransitionComponent={Fade}
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            p: 2,
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ px: 3, pt: 3, pb: 1 }}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Box
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: alpha('#d32f2f', 0.1),
+                color: '#d32f2f',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <ErrorOutline fontSize="medium" />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e293b' }}>
+              {confirmDialog.title}
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 2 }}>
+          <Typography variant="body1" sx={{ color: '#475569', fontSize: '1.05rem' }}>
+            {confirmDialog.message}
+          </Typography>
+        </DialogContent>
+        <Box sx={{ px: 3, pb: 3, pt: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+            sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 600, color: '#64748b', borderColor: '#cbd5e1' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={confirmDialog.onConfirm}
+            sx={{ borderRadius: 2, textTransform: 'none', px: 3, fontWeight: 700, boxShadow: '0 4px 14px 0 rgba(211, 47, 47, 0.39)' }}
+          >
+            Confirm Delete
+          </Button>
+        </Box>
       </Dialog>
 
       <Snackbar
