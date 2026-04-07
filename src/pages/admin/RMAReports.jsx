@@ -6,7 +6,7 @@ import {
 import { Download as DownloadIcon } from '@mui/icons-material';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, Legend
+    PieChart, Pie, Cell
 } from 'recharts';
 import rmaService from '../../services/api/rmaService';
 
@@ -178,18 +178,20 @@ const RMAReports = () => {
 
                 {/* Status Breakdown Pie Chart */}
                 <Grid size={{ xs: 12, md: 4 }}>
-                    <Paper sx={{ p: 4, borderRadius: 4, boxShadow: '0 8px 30px rgba(0,0,0,0.04)', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" mb={2} sx={{ fontWeight: 700, color: '#1e293b' }}>Status distribution</Typography>
-                        <Box sx={{ flexGrow: 1, minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Paper sx={{ p: 3, borderRadius: 4, boxShadow: '0 8px 30px rgba(0,0,0,0.04)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <Typography variant="h6" mb={2.5} sx={{ fontWeight: 700, color: '#1e293b' }}>
+                            Status Distribution
+                        </Typography>
+                        <Box sx={{ height: 260, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
                                         data={status_breakdown}
                                         cx="50%"
-                                        cy="50%"
-                                        innerRadius={80}
-                                        outerRadius={110}
-                                        paddingAngle={5}
+                                        cy="48%"
+                                        innerRadius={58}
+                                        outerRadius={86}
+                                        paddingAngle={3}
                                         dataKey="value"
                                         stroke="none"
                                         animationDuration={1000}
@@ -202,9 +204,49 @@ const RMAReports = () => {
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                                         itemStyle={{ fontWeight: 600 }}
                                     />
-                                    <Legend iconType="circle" layout="horizontal" verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '13px', fontWeight: 600 }} />
                                 </PieChart>
                             </ResponsiveContainer>
+                        </Box>
+                        <Box
+                            sx={{
+                                mt: 1.5,
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                                gap: 1.25,
+                            }}
+                        >
+                            {status_breakdown.map((item) => (
+                                <Box
+                                    key={item.name}
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        minWidth: 0,
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            width: 12,
+                                            height: 12,
+                                            borderRadius: '50%',
+                                            flexShrink: 0,
+                                            backgroundColor: item.color,
+                                        }}
+                                    />
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            color: '#475569',
+                                            fontWeight: 600,
+                                            lineHeight: 1.3,
+                                            wordBreak: 'break-word',
+                                        }}
+                                    >
+                                        {item.name} ({item.value})
+                                    </Typography>
+                                </Box>
+                            ))}
                         </Box>
                     </Paper>
                 </Grid>

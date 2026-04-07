@@ -28,6 +28,7 @@ import {
   Business,
 } from '@mui/icons-material';
 import authService from '../../services/api/authService';
+import { usePortalSettings } from '../../context/PortalSettingsContext';
 
 const StaffLogin = () => {
   const [email, setEmail] = useState('');
@@ -45,6 +46,7 @@ const StaffLogin = () => {
 
   const navigate = useNavigate();
   const theme = useTheme();
+  const { portalName } = usePortalSettings();
 
   // Email validation
   const validateEmail = (email) => {
@@ -193,10 +195,10 @@ const StaffLogin = () => {
                     mr: 2,
                   }}
                 >
-                  <img src="/logo.png" alt="RMA Pro Staff" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src="/logo.png" alt={`${portalName} Staff`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </Box>
                 <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
-                  Staff Portal
+                  {portalName} Staff
                 </Typography>
               </Box>
 

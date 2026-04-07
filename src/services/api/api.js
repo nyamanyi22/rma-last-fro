@@ -80,6 +80,28 @@ api.interceptors.response.use(
     }
 );
 
+api.interceptors.response.use(
+    response => {
+        if (typeof window !== 'undefined' && window.location.pathname === '/maintenance' && response.status < 500) {
+            sessionStorage.removeItem('maintenance_message');
+        }
+
+        return response;
+    },
+    error => {
+        if (error.response?.status === 503 && typeof window !== 'undefined') {
+            const maintenanceMessage = error.response?.data?.message || 'The system is currently in maintenance mode. Please try again later.';
+            sessionStorage.setItem('maintenance_message', maintenanceMessage);
+
+            if (window.location.pathname !== '/maintenance') {
+                window.location.href = '/maintenance';
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
+
 
 
 // ==================== AUTH ENDPOINTS ====================
@@ -91,16 +113,22 @@ export const authApi = {
     resend2FA: (email) => api.post('/staff/resend-2fa', { email }),
     logout: () => api.post('/logout'),
     getMe: () => api.get('/me'),
+    refreshSession: () => api.post('/session/refresh'),
     forgotPassword: (data) => api.post('/forgot-password', data),
     resetPassword: (data) => api.post('/reset-password', data),
     verifyEmail: (data) => api.post('/verify-email', data),
     resendVerification: (data) => api.post('/resend-verification', data),
 };
 
+export const portalApi = {
+    getPortalSettings: () => api.get('/portal-settings'),
+};
+
 // ==================== PROFILE ENDPOINTS ====================
 export const profileApi = {
     updateProfile: (data) => api.put('/profile', data),
     getProfile: () => api.get('/profile'), // Now global
+    changePassword: (data) => api.put('/profile/password', data),
     deleteAccount: () => api.delete('/profile'),
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, 
   Container, 
@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams, Link as RouterLink } from 'react-router-dom';
 import authService from '../../services/api/authService';
+import { usePortalSettings } from '../../context/PortalSettingsContext';
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
@@ -26,6 +27,8 @@ const VerifyEmail = () => {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const hasAttemptedVerification = useRef(false);
+  const { portalName } = usePortalSettings();
   
   const navigate = useNavigate();
   const email = searchParams.get('email');
@@ -33,6 +36,10 @@ const VerifyEmail = () => {
 
   useEffect(() => {
     if (email && token) {
+      if (hasAttemptedVerification.current) {
+        return;
+      }
+      hasAttemptedVerification.current = true;
       handleVerify();
     } else {
       setError('Missing verification information. Please check your link.');
@@ -264,7 +271,7 @@ const VerifyEmail = () => {
 
             <Box sx={{ mt: 6 }}>
               <Typography variant="caption" color="text.disabled">
-                &copy; {new Date().getFullYear()} {import.meta.env.VITE_APP_NAME || 'RMA Management System'}. All rights reserved.
+                &copy; {new Date().getFullYear()} {portalName}. All rights reserved.
               </Typography>
             </Box>
           </Paper>

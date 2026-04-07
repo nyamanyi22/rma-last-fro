@@ -2,6 +2,30 @@
 import { authApi, profileApi } from './api';
 
 class AuthService {
+    persistSession(data) {
+        const token = data.token || data.access_token;
+
+        if (token) {
+            localStorage.setItem('token', token);
+        }
+
+        if (data.user) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+        }
+
+        if (data.session_expires_at) {
+            localStorage.setItem('session_expires_at', data.session_expires_at);
+        }
+
+        if (data.session_duration_hours !== undefined) {
+            localStorage.setItem('session_duration_hours', String(data.session_duration_hours));
+        }
+
+        if (data.session_timeout_alerts !== undefined) {
+            localStorage.setItem('session_timeout_alerts', data.session_timeout_alerts ? '1' : '0');
+        }
+    }
+
     /**
      * Register a new customer
      */
@@ -20,12 +44,7 @@ class AuthService {
                 postal_code: userData.postalCode || null,
             });
 
-            const token = response.data.token || response.data.access_token;
-            if (token) {
-                localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
-                this.setupAutoLogout();
-            }
+            this.persistSession(response.data);
 
             return response.data;
         } catch (error) {
@@ -40,12 +59,7 @@ class AuthService {
         try {
             const response = await authApi.login(email, password);
 
-            const token = response.data.token || response.data.access_token;
-            if (token) {
-                localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
-                this.setupAutoLogout();
-            }
+            this.persistSession(response.data);
 
             return response.data;
         } catch (error) {
@@ -60,12 +74,7 @@ class AuthService {
         try {
             const response = await authApi.staffLogin(email, password);
 
-            const token = response.data.token || response.data.access_token;
-            if (token) {
-                localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
-                this.setupAutoLogout();
-            }
+            this.persistSession(response.data);
 
             return response.data;
         } catch (error) {
@@ -80,12 +89,7 @@ class AuthService {
         try {
             const response = await authApi.verify2FA(email, code);
 
-            const token = response.data.token || response.data.access_token;
-            if (token) {
-                localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
-                this.setupAutoLogout();
-            }
+            this.persistSession(response.data);
 
             return response.data;
         } catch (error) {
@@ -127,6 +131,15 @@ class AuthService {
 
             if (response.data.user) {
                 localStorage.setItem('user', JSON.stringify(response.data.user));
+            }
+            if (response.data.session_expires_at) {
+                localStorage.setItem('session_expires_at', response.data.session_expires_at);
+            }
+            if (response.data.session_duration_hours !== undefined) {
+                localStorage.setItem('session_duration_hours', String(response.data.session_duration_hours));
+            }
+            if (response.data.session_timeout_alerts !== undefined) {
+                localStorage.setItem('session_timeout_alerts', response.data.session_timeout_alerts ? '1' : '0');
             }
 
             return response.data;
@@ -196,13 +209,10 @@ class AuthService {
     /**
      * Refresh token
      */
-    async refreshToken() {
+    async refreshSession() {
         try {
-            const response = await authApi.refreshToken();
-
-            if (response.data.token) {
-                localStorage.setItem('token', response.data.token);
-            }
+            const response = await authApi.refreshSession();
+            this.persistSession(response.data);
 
             return response.data;
         } catch (error) {
@@ -311,39 +321,15 @@ class AuthService {
      * Check if token is expired
      */
     isTokenExpired() {
-        const token = this.getToken();
-        if (!token) return true;
-
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.exp * 1000 < Date.now();
-        } catch {
-            return true;
-        }
+        const expiresAt = localStorage.getItem('session_expires_at');
+        return !expiresAt || new Date(expiresAt).getTime() <= Date.now();
     }
 
     /**
      * Set up auto logout (optional)
      */
     setupAutoLogout() {
-        const token = this.getToken();
-        if (!token) return;
-
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const expiresIn = payload.exp * 1000 - Date.now();
-
-            if (expiresIn > 0) {
-                setTimeout(() => {
-                    if (this.isAuthenticated()) {
-                        this.logout();
-                        window.location.href = '/login?session=expired';
-                    }
-                }, expiresIn);
-            }
-        } catch {
-            // Ignore token decode errors
-        }
+        return;
     }
 
     /**
@@ -352,6 +338,9 @@ class AuthService {
     clearSession() {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('session_expires_at');
+        localStorage.removeItem('session_duration_hours');
+        localStorage.removeItem('session_timeout_alerts');
     }
 
     /**

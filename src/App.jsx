@@ -43,6 +43,8 @@ import SuperAdminSalesManagement from './pages/super-admin/SuperAdminSalesManage
 // Error Pages
 import NotFound from './pages/error/NotFound';
 import Forbidden from './pages/error/Forbidden';
+import MaintenancePage from './pages/error/MaintenancePage';
+import SessionTimeoutDialog from './components/session/SessionTimeoutDialog';
 
 // Create theme
 const theme = createTheme({
@@ -142,6 +144,7 @@ function App() {
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <BrowserRouter>
+          <SessionTimeoutDialog />
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<CustomerLogin />} />
@@ -150,6 +153,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/maintenance" element={<MaintenancePage />} />
             <Route path="/" element={<Navigate to="/login" />} />
 
             {/* Customer Routes - SINGLE DEFINITION */}

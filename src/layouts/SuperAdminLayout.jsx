@@ -50,6 +50,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import notificationService from '../services/api/notificationService';
+import { usePortalSettings } from '../context/PortalSettingsContext';
 
 const drawerWidth = 260;
 const collapsedWidth = 72;
@@ -71,6 +72,7 @@ const SuperAdminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const { portalName } = usePortalSettings();
 
     const handleDrawerToggle = () => {
         if (isMobile) setMobileOpen(!mobileOpen);
@@ -183,7 +185,7 @@ const SuperAdminLayout = () => {
                 </Box>
                 {!collapsed && (
                     <Box>
-                        <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.5px' }}>RMA Portal</Typography>
+                        <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.5px' }}>{portalName}</Typography>
                         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>Super Admin</Typography>
                     </Box>
                 )}

@@ -35,6 +35,7 @@ import {
 } from "@mui/icons-material";
 import authService from "../../services/api/authService";
 import { getData } from "country-list";
+import { usePortalSettings } from "../../context/PortalSettingsContext";
 
 const steps = ["Account Details", "Check Email", "Complete"];
 
@@ -64,6 +65,7 @@ const Register = () => {
 
   const navigate = useNavigate();
   const theme = useTheme();
+  const { portalName } = usePortalSettings();
 
   const handleChange = (e) => {
     setFormData({
@@ -234,15 +236,45 @@ const Register = () => {
                   options={countryOptions}
                   placeholder="Select Country"
                   isSearchable
+                  menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                  menuPosition="fixed"
                   value={countryOptions.find(c => c.value === formData.country) || null}
                   onChange={(option) => setFormData({ ...formData, country: option?.value || "" })}
                   isDisabled={loading}
                   styles={{
                     control: (base) => ({
                       ...base,
+                      minHeight: 56,
                       borderRadius: 8,
-                      borderColor: '#e0e0e0',
+                      borderColor: 'rgba(0, 0, 0, 0.23)',
+                      boxShadow: 'none',
                       '&:hover': { borderColor: theme.palette.primary.main },
+                    }),
+                    valueContainer: (base) => ({
+                      ...base,
+                      paddingTop: 6,
+                      paddingBottom: 6,
+                    }),
+                    menuPortal: (base) => ({
+                      ...base,
+                      zIndex: 1600,
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      zIndex: 1600,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      boxShadow: '0 18px 50px rgba(15, 23, 42, 0.18)',
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isSelected
+                        ? alpha(theme.palette.primary.main, 0.14)
+                        : state.isFocused
+                          ? alpha(theme.palette.primary.main, 0.08)
+                          : '#fff',
+                      color: '#0f172a',
+                      cursor: 'pointer',
                     }),
                   }}
                 />
@@ -367,6 +399,7 @@ const Register = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Box sx={{ textAlign: { xs: 'center', md: 'left' }, mb: { xs: 4, md: 0 } }}>
               {/* Logo/Brand */}
+          
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', md: 'flex-start' }, mb: 3 }}>
                 <Box
                   sx={{
@@ -380,16 +413,16 @@ const Register = () => {
                     mr: 2,
                   }}
                 >
-                  <SupportAgent sx={{ color: 'white', fontSize: 28 }} />
+                  <img src="/logo.png" alt={portalName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </Box>
                 <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
-                  RMA Pro
+                  {portalName}
                 </Typography>
               </Box>
 
               {/* Welcome Message */}
               <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 2, fontSize: { xs: '2rem', md: '2.5rem' } }}>
-                Join RMA Pro! 🚀
+                Join {portalName} Today!
               </Typography>
               <Typography variant="h6" color="text.secondary" sx={{ mb: 4, fontWeight: 'normal' }}>
                 Create an account to track your returns, submit RMA requests, and get real-time updates.
@@ -415,7 +448,7 @@ const Register = () => {
 
           {/* Right Column - Registration Form */}
           <Grid size={{ xs: 12, md: 6 }}>
-            <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
+            <Paper elevation={3} sx={{ p: 4, borderRadius: 3, overflow: 'visible' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <PersonAdd sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="h5" sx={{ fontWeight: 'bold' }}>

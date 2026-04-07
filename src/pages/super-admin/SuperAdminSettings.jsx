@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
     Box,
     Typography,
@@ -45,8 +45,11 @@ import {
     Settings,
     Business,
     Assignment,
+    Add,
+    Remove,
 } from '@mui/icons-material';
 import { superAdminApi, rmaApi } from '../../services/api/api';
+import { usePortalSettings } from '../../context/PortalSettingsContext';
 
 const ACCENT = '#a855f7';
 
@@ -92,24 +95,23 @@ const SettingRow = ({ primary, secondary, children, last = false }) => (
 );
 
 const SuperAdminSettings = () => {
+    const { refreshPortalSettings } = usePortalSettings();
     const [tab, setTab] = useState(0);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [showApiKey, setShowApiKey] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [savingPasswordPolicy, setSavingPasswordPolicy] = useState(false);
 
     // Toggle states
     const [toggles, setToggles] = useState({
-        emailNotifications: true,
+        disableAllNotifications: false,
         maintenanceMode: false,
         allowRegistrations: true,
         twoFactorRequired: false,
-        auditLogging: true,
         autoBackup: true,
-        rmaEmailAlerts: true,
+        rmaEmailAlertsToStaff: true,
         sessionTimeout: false,
-        debugMode: false,
-        rateLimiting: true,
     });
 
     // Form states
@@ -119,6 +121,8 @@ const SuperAdminSettings = () => {
     const [sessionDuration, setSessionDuration] = useState('8');
     const [maxFileSize, setMaxFileSize] = useState('5');
     const [language, setLanguage] = useState('en');
+    const [minPasswordLength, setMinPasswordLength] = useState(8);
+    const [passwordExpiryDays, setPasswordExpiryDays] = useState(90);
     const [systemInfo, setSystemInfo] = useState(null);
     const [loadingInfo, setLoadingInfo] = useState(true);
 
@@ -141,18 +145,17 @@ const SuperAdminSettings = () => {
                     if (s.session_duration) setSessionDuration(s.session_duration);
                     if (s.max_file_size) setMaxFileSize(s.max_file_size);
                     if (s.language) setLanguage(s.language);
+                    setMinPasswordLength(Number(s.min_password_length || 8));
+                    setPasswordExpiryDays(Number(s.password_expiry_days || 90));
 
                     setToggles({
-                        emailNotifications: s.email_notifications === '1',
+                        disableAllNotifications: s.disable_all_notifications === '1',
                         maintenanceMode: s.maintenance_mode === '1',
                         allowRegistrations: s.allow_registrations === '1',
                         twoFactorRequired: s.two_factor_required === '1',
-                        auditLogging: s.audit_logging === '1',
                         autoBackup: s.auto_backup === '1',
-                        rmaEmailAlerts: s.rma_email_alerts === '1',
+                        rmaEmailAlertsToStaff: s.rma_email_alerts_to_staff === '1',
                         sessionTimeout: s.session_timeout === '1',
-                        debugMode: s.debug_mode === '1',
-                        rateLimiting: s.rate_limiting === '1',
                     });
                 }
 
@@ -183,6 +186,31 @@ const SuperAdminSettings = () => {
         setToggles(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
+    const clampValue = (value, min, max) => {
+        const parsed = Number(value);
+
+        if (Number.isNaN(parsed)) {
+            return min;
+        }
+
+        return Math.min(max, Math.max(min, parsed));
+    };
+
+    const handleNumberInput = (setter, min, max) => (event) => {
+        const { value } = event.target;
+
+        if (value === '') {
+            setter('');
+            return;
+        }
+
+        setter(clampValue(value, min, max));
+    };
+
+    const bumpNumber = (value, setter, delta, min, max) => {
+        setter(clampValue(Number(value || min) + delta, min, max));
+    };
+
     const handleSave = async (section) => {
         setSaving(true);
         try {
@@ -194,19 +222,17 @@ const SuperAdminSettings = () => {
                 session_duration: sessionDuration,
                 max_file_size: maxFileSize,
                 language: language,
-                email_notifications: toggles.emailNotifications ? '1' : '0',
+                disable_all_notifications: toggles.disableAllNotifications ? '1' : '0',
                 maintenance_mode: toggles.maintenanceMode ? '1' : '0',
                 allow_registrations: toggles.allowRegistrations ? '1' : '0',
                 two_factor_required: toggles.twoFactorRequired ? '1' : '0',
-                audit_logging: toggles.auditLogging ? '1' : '0',
                 auto_backup: toggles.autoBackup ? '1' : '0',
-                rma_email_alerts: toggles.rmaEmailAlerts ? '1' : '0',
+                rma_email_alerts_to_staff: toggles.rmaEmailAlertsToStaff ? '1' : '0',
                 session_timeout: toggles.sessionTimeout ? '1' : '0',
-                debug_mode: toggles.debugMode ? '1' : '0',
-                rate_limiting: toggles.rateLimiting ? '1' : '0',
             };
 
             await superAdminApi.updateSettings(data);
+            await refreshPortalSettings();
             setSnackbar({ open: true, message: `${section} settings saved successfully.`, severity: 'success' });
         } catch (error) {
             console.error('Failed to save settings:', error);
@@ -226,6 +252,27 @@ const SuperAdminSettings = () => {
             setSnackbar({ open: true, message: 'Failed to save return policy.', severity: 'error' });
         } finally {
             setSavingPolicy(false);
+        }
+    };
+
+    const handleSavePasswordPolicy = async () => {
+        setSavingPasswordPolicy(true);
+        try {
+            const data = {
+                min_password_length: String(clampValue(minPasswordLength, 4, 20)),
+                password_expiry_days: String(clampValue(passwordExpiryDays, 0, 365)),
+            };
+
+            await superAdminApi.updateSettings(data);
+            await refreshPortalSettings();
+            setMinPasswordLength(Number(data.min_password_length));
+            setPasswordExpiryDays(Number(data.password_expiry_days));
+            setSnackbar({ open: true, message: 'Password policy updated successfully.', severity: 'success' });
+        } catch (error) {
+            console.error('Failed to save password policy:', error);
+            setSnackbar({ open: true, message: 'Failed to update password policy.', severity: 'error' });
+        } finally {
+            setSavingPasswordPolicy(false);
         }
     };
 
@@ -347,7 +394,7 @@ const SuperAdminSettings = () => {
                 </Box>
 
                 <Box sx={{ p: { xs: 2, md: 3 } }}>
-                    {/* ── GENERAL TAB ── */}
+                    {/* â”€â”€ GENERAL TAB â”€â”€ */}
                     {tab === 0 && (
                         <Grid container spacing={3}>
                             <Grid size={{ xs: 12, md: 6 }}>
@@ -449,7 +496,7 @@ const SuperAdminSettings = () => {
                         </Grid>
                     )}
 
-                    {/* ── POLICIES TAB ── */}
+                    {/* â”€â”€ POLICIES TAB â”€â”€ */}
                     {tab === 1 && (
                         <Box>
                             <SectionHeader
@@ -506,7 +553,7 @@ const SuperAdminSettings = () => {
                         </Box>
                     )}
 
-                    {/* ── NOTIFICATIONS TAB ── */}
+                    {/* â”€â”€ NOTIFICATIONS TAB â”€â”€ */}
                     {tab === 2 && (
                         <Box>
                             <SectionHeader
@@ -514,24 +561,33 @@ const SuperAdminSettings = () => {
                                 title="Notification Preferences"
                                 description="Control which events trigger email and system alerts"
                             />
+                            <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+                                Critical emails are always sent: password reset, email verification links, and 2FA codes.
+                            </Alert>
+                            {toggles.disableAllNotifications && (
+                                <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+                                    Non-critical notification emails are currently blocked. This includes customer RMA status updates, customer RMA submitted/comment emails, daily pending summaries, new RMA staff alerts, and staff RMA status-change alerts.
+                                </Alert>
+                            )}
                             <List disablePadding>
                                 <SettingRow
-                                    primary="Email Notifications"
-                                    secondary="Send system-wide email notifications for RMA updates, approvals and rejections"
+                                    primary="Disable All Notification Emails"
+                                    secondary="When enabled, blocks all non-critical notification emails across the portal. Critical security emails still send."
                                 >
                                     <Switch
-                                        checked={toggles.emailNotifications}
-                                        onChange={() => handleToggle('emailNotifications')}
+                                        checked={toggles.disableAllNotifications}
+                                        onChange={() => handleToggle('disableAllNotifications')}
                                         sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: ACCENT } }}
                                     />
                                 </SettingRow>
                                 <SettingRow
                                     primary="RMA Email Alerts to Staff"
-                                    secondary="Notify CSR agents when a new RMA is submitted or status changes"
+                                    secondary="Sends staff emails for new RMA submissions and RMA status changes. This only works when Disable All Notification Emails is OFF."
                                 >
                                     <Switch
-                                        checked={toggles.rmaEmailAlerts}
-                                        onChange={() => handleToggle('rmaEmailAlerts')}
+                                        checked={toggles.rmaEmailAlertsToStaff}
+                                        onChange={() => handleToggle('rmaEmailAlertsToStaff')}
+                                        disabled={toggles.disableAllNotifications}
                                         sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: ACCENT } }}
                                     />
                                 </SettingRow>
@@ -561,13 +617,13 @@ const SuperAdminSettings = () => {
                         </Box>
                     )}
 
-                    {/* ── SECURITY TAB ── */}
+                    {/* â”€â”€ SECURITY TAB â”€â”€ */}
                     {tab === 3 && (
                         <Box>
                             <SectionHeader
                                 icon={<Security />}
                                 title="Security Policies"
-                                description="Control authentication, access and audit settings"
+                                description="Control authentication, access, and password rules"
                             />
                             <Alert
                                 severity={toggles.maintenanceMode ? 'warning' : 'info'}
@@ -575,7 +631,7 @@ const SuperAdminSettings = () => {
                                 icon={toggles.maintenanceMode ? <Warning /> : <Shield />}
                             >
                                 {toggles.maintenanceMode
-                                    ? 'Maintenance Mode is ON — only Super Admins can access the portal.'
+                                    ? 'Maintenance Mode is ON â€” only Super Admins can access the portal.'
                                     : 'Security policies apply to all non-Super Admin users.'}
                             </Alert>
                             <List disablePadding>
@@ -586,26 +642,6 @@ const SuperAdminSettings = () => {
                                     <Switch
                                         checked={toggles.twoFactorRequired}
                                         onChange={() => handleToggle('twoFactorRequired')}
-                                        sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: ACCENT } }}
-                                    />
-                                </SettingRow>
-                                <SettingRow
-                                    primary="Audit Logging"
-                                    secondary="Log all admin actions and RMA status changes for compliance"
-                                >
-                                    <Switch
-                                        checked={toggles.auditLogging}
-                                        onChange={() => handleToggle('auditLogging')}
-                                        sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: ACCENT } }}
-                                    />
-                                </SettingRow>
-                                <SettingRow
-                                    primary="Rate Limiting"
-                                    secondary="Protect endpoints against brute-force attacks (max 60 req/min)"
-                                >
-                                    <Switch
-                                        checked={toggles.rateLimiting}
-                                        onChange={() => handleToggle('rateLimiting')}
                                         sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: ACCENT } }}
                                     />
                                 </SettingRow>
@@ -642,17 +678,117 @@ const SuperAdminSettings = () => {
                                     {saving ? 'Saving...' : 'Save Security Settings'}
                                 </Button>
                             </Box>
+
+                            <Divider sx={{ my: 4, borderColor: '#f1f5f9' }} />
+
+                            <SectionHeader
+                                icon={<Shield />}
+                                title="Password Policy"
+                                description="Set the minimum password length and how long passwords remain valid"
+                            />
+                            <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+                                Set password expiry to 0 if you do not want passwords to expire. Existing users will be prompted to change expired passwords after their next authenticated request.
+                            </Alert>
+
+                            <Grid container spacing={3}>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <TextField
+                                        label="Minimum Password Length"
+                                        type="number"
+                                        value={minPasswordLength}
+                                        onChange={handleNumberInput(setMinPasswordLength, 4, 20)}
+                                        fullWidth
+                                        size="small"
+                                        InputProps={{
+                                            inputProps: { min: 4, max: 20 },
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => bumpNumber(minPasswordLength, setMinPasswordLength, -1, 4, 20)}
+                                                        edge="start"
+                                                    >
+                                                        <Remove fontSize="small" />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => bumpNumber(minPasswordLength, setMinPasswordLength, 1, 4, 20)}
+                                                        edge="end"
+                                                    >
+                                                        <Add fontSize="small" />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        helperText="Allowed range: 4 to 20 characters."
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, '&.Mui-focused fieldset': { borderColor: ACCENT } }, '& label.Mui-focused': { color: ACCENT } }}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 6 }}>
+                                    <TextField
+                                        label="Password Expiry (Days)"
+                                        type="number"
+                                        value={passwordExpiryDays}
+                                        onChange={handleNumberInput(setPasswordExpiryDays, 0, 365)}
+                                        fullWidth
+                                        size="small"
+                                        InputProps={{
+                                            inputProps: { min: 0, max: 365 },
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => bumpNumber(passwordExpiryDays, setPasswordExpiryDays, -1, 0, 365)}
+                                                        edge="start"
+                                                    >
+                                                        <Remove fontSize="small" />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => bumpNumber(passwordExpiryDays, setPasswordExpiryDays, 1, 0, 365)}
+                                                        edge="end"
+                                                    >
+                                                        <Add fontSize="small" />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        helperText="0 means passwords never expire. Allowed range: 0 to 365 days."
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, '&.Mui-focused fieldset': { borderColor: ACCENT } }, '& label.Mui-focused': { color: ACCENT } }}
+                                    />
+                                </Grid>
+                            </Grid>
+
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 3 }}>
+                                <Button
+                                    variant="contained"
+                                    startIcon={savingPasswordPolicy ? <CircularProgress size={16} color="inherit" /> : <Save />}
+                                    disabled={savingPasswordPolicy}
+                                    onClick={handleSavePasswordPolicy}
+                                    sx={{ bgcolor: ACCENT, '&:hover': { bgcolor: '#9333ea' }, borderRadius: 2, fontWeight: 600, px: 3, boxShadow: `0 4px 12px ${ACCENT}44` }}
+                                >
+                                    {savingPasswordPolicy ? 'Updating...' : 'Update Policy'}
+                                </Button>
+                            </Box>
                         </Box>
                     )}
 
 
-                    {/* ── SYSTEM TAB ── */}
+                    {/* â”€â”€ SYSTEM TAB â”€â”€ */}
                     {tab === 4 && (
                         <Box>
                             <SectionHeader
                                 icon={<Storage />}
                                 title="System & Maintenance"
-                                description="Advanced system controls — use with caution"
+                                description="Advanced system controls â€” use with caution"
                             />
                             <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
                                 Changes on this tab affect the entire platform immediately. Proceed carefully.
@@ -668,17 +804,7 @@ const SuperAdminSettings = () => {
                                         sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: ACCENT } }}
                                     />
                                 </SettingRow>
-                                <SettingRow
-                                    primary="Debug Mode"
-                                    secondary="Enable verbose error logging — do NOT enable in production"
-                                    last
-                                >
-                                    <Switch
-                                        checked={toggles.debugMode}
-                                        onChange={() => handleToggle('debugMode')}
-                                        sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#ef4444' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#ef4444' } }}
-                                    />
-                                </SettingRow>
+
                             </List>
 
                             <Divider sx={{ my: 3, borderColor: '#f1f5f9' }} />
@@ -758,3 +884,4 @@ const SuperAdminSettings = () => {
 };
 
 export default SuperAdminSettings;
+

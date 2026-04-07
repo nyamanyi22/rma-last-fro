@@ -21,6 +21,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import authService from '../../services/api/authService';
+import { usePortalSettings } from '../../context/PortalSettingsContext';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -28,6 +29,7 @@ const ForgotPassword = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const { portalName } = usePortalSettings();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -209,7 +211,7 @@ const ForgotPassword = () => {
 
             <Box sx={{ mt: 5, textAlign: 'center' }}>
               <Typography variant="caption" color="text.disabled">
-                &copy; {new Date().getFullYear()} {import.meta.env.VITE_APP_NAME || 'RMA System'}. All rights reserved.
+                &copy; {new Date().getFullYear()} {portalName}. All rights reserved.
               </Typography>
             </Box>
           </Paper>

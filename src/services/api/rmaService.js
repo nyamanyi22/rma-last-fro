@@ -779,6 +779,8 @@ class RMAService {
     handleError(error) {
         const status = error.response?.status;
         const responseData = error.response?.data;
+        const isMaintenanceMode = status === 503 || responseData?.maintenance_mode;
+        const maintenanceMessage = 'The system is currently under maintenance. Please try again in a little while.';
 
         console.error('RMA Service Error:', {
             url: error.config?.url,
@@ -798,6 +800,10 @@ class RMAService {
             alert(`Validation Error: ${firstErrorMessage}`);
 
             return new Error(firstErrorMessage);
+        }
+
+        if (isMaintenanceMode) {
+            return new Error(maintenanceMessage);
         }
 
         const message = responseData?.message || error.message || 'An error occurred';

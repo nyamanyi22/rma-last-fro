@@ -105,11 +105,16 @@ class SuperAdminService {
     handleError(error) {
         const status          = error.response?.status;
         const responseData    = error.response?.data;
+        const isMaintenanceMode = status === 503 || responseData?.maintenance_mode;
         const message         = responseData?.message || error.message || 'An error occurred';
 
         if (responseData?.errors) {
             const firstKey = Object.keys(responseData.errors)[0];
             return new Error(responseData.errors[firstKey][0]);
+        }
+
+        if (isMaintenanceMode) {
+            return new Error('The system is currently under maintenance. Please try again in a little while.');
         }
 
         const prefix = status ? `[HTTP ${status}] ` : '';

@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import authService from '../../services/api/authService';
+import { usePortalSettings } from '../../context/PortalSettingsContext';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -35,6 +36,7 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState(false);
   
   const navigate = useNavigate();
+  const { portalName } = usePortalSettings();
   const email = searchParams.get('email');
   const token = searchParams.get('token');
 
@@ -245,7 +247,7 @@ const ResetPassword = () => {
 
             <Box sx={{ mt: 5, textAlign: 'center' }}>
               <Typography variant="caption" color="text.disabled">
-                &copy; {new Date().getFullYear()} {import.meta.env.VITE_APP_NAME || 'RMA System'}. All rights reserved.
+                &copy; {new Date().getFullYear()} {portalName}. All rights reserved.
               </Typography>
             </Box>
           </Paper>

@@ -47,6 +47,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import notificationService from '../services/api/notificationService';
+import { usePortalSettings } from '../context/PortalSettingsContext';
 
 const drawerWidth = 260;
 const collapsedWidth = 72;
@@ -68,6 +69,7 @@ const AdminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const { portalName } = usePortalSettings();
 
     const handleDrawerToggle = () => {
         if (isMobile) {
@@ -213,7 +215,7 @@ const AdminLayout = () => {
                             variant="subtitle1"
                             sx={{ color: '#fff', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.5px' }}
                         >
-                            RMA Portal
+                            {portalName}
                         </Typography>
                         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>
                             Admin Console

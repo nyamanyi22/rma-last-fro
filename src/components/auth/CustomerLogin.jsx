@@ -26,6 +26,7 @@ import {
   ArrowForward
 } from '@mui/icons-material';
 import authService from '../../services/api/authService';
+import { usePortalSettings } from '../../context/PortalSettingsContext';
 
 const CustomerLogin = () => {
   const [email, setEmail] = useState('');
@@ -37,6 +38,7 @@ const CustomerLogin = () => {
   const [resendMessage, setResendMessage] = useState('');
   const navigate = useNavigate();
   const theme = useTheme();
+  const { portalName } = usePortalSettings();
 
   // Email validation function
   const validateEmail = (email) => {
@@ -127,10 +129,10 @@ const CustomerLogin = () => {
                     mr: 2,
                   }}
                 >
-                  <img src="/logo.png" alt="RMA Pro" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src="/logo.png" alt={portalName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </Box>
                 <Typography variant="h4" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
-                  RMA Pro
+                  {portalName}
                 </Typography>
               </Box>
 

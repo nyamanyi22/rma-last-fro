@@ -29,6 +29,7 @@ import {
     Add
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { usePortalSettings } from '../context/PortalSettingsContext';
 
 const drawerWidth = 280;
 
@@ -40,6 +41,7 @@ const ClientLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const { portalName } = usePortalSettings();
 
     const handleDrawerToggle = () => {
         setOpen(!open);
@@ -88,7 +90,7 @@ const ClientLayout = () => {
                         <MenuIcon />
                     </IconButton>
                     <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-                        Customer Portal
+                        {portalName}
                     </Typography>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
